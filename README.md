@@ -7,11 +7,10 @@
 #### In addition, I have added various @function.  
 
 ## Example
-- The following sample is raw output of this extension.  
+- The following sample is raw output of this extension.(The file was too large, so I compressed it.)  
 #### sample 1  
 
-
-
+<div><video controls src="https://user-images.githubusercontent.com/118420657/235941290-2708913c-16c0-4f3a-82db-7ab729ea7ea8.mp4" muted="false"></video></div>
 
 <br>
 
@@ -38,9 +37,9 @@
 4500,wave  
 5000,end  
 - Copy the following text into the [Extend Prompt (Main)]. The wildcards used below are those provided by default.  
--1::\__lb_vel_slow__  
--1::\__lb_zoom_wave__  
--1::\__lb_prompt_face__  
+-1::\_\_lb_vel_slow__  
+-1::\_\_lb_zoom_wave__  
+-1::\_\_lb_prompt_face__  
 - Press [Generate]  
 - (Default file output location, video encoding settings, etc. are the same as in the original script)  
 
