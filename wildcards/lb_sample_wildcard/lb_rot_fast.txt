@@ -1,0 +1,2 @@
+#rot(@random(70,90))
+#rot(@random(-70,-90))

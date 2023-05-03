@@ -1,0 +1,4 @@
+#center(@random(0,1),0)
+#center(@random(0,1),1)
+#center(0,@random(0,1))
+#center(1,@random(0,1))

@@ -1,0 +1,6 @@
+(sitting:@wave_amplitude(1.5,0))
+(dancing:@wave_amplitude(1.5,0))
+(jump:@wave_amplitude(1.5,0))
+(stylish posing:@wave_amplitude(1.5,0))
+(folding arms:@wave_amplitude(1.5,0))
+(V-sign in front of face:@wave_amplitude(1.5,0))

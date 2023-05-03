@@ -1,0 +1,5 @@
+(open mouth:@wave_amplitude(1.0,0)),(close mouth:@wave_amplitude(0,1.0))
+(looking at viewer:@wave_amplitude(1.0,0)),(face in profile:@wave_amplitude(0,1.0))
+(tongue out:@wave_amplitude(1.0,0))
+(smile:@wave_amplitude(1.0,0))
+(angry:@wave_amplitude(1.0,0))

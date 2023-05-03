@@ -1,0 +1,6 @@
+$shake_x(250, 0.01)
+$shake_y(250, 0.01)
+$shake_rot(250, 1.5)
+$shake_rot_x(250, 5)
+$shake_rot_y(250, 12)
+$shake_zoom(250, 1.025)

@@ -1,0 +1,8 @@
+#vel_x(@wave_amplitude(0,@random(0.3,0.5)))
+#vel_x(@wave_amplitude(0,@random(0.3,0.5))),#vel_y(@wave_amplitude(0,@random(0.3,0.5)))
+#vel_x(@wave_amplitude(0,@random(0.3,0.5))),#vel_y(@wave_amplitude(0,@random(-0.3,-0.5)))
+#vel_y(@wave_amplitude(0,@random(0.3,0.5)))
+#vel_x(@wave_amplitude(0,@random(-0.3,-0.5)))
+#vel_x(@wave_amplitude(0,@random(-0.3,-0.5))),#vel_y(@wave_amplitude(0,@random(0.3,0.5)))
+#vel_x(@wave_amplitude(0,@random(-0.3,-0.5))),#vel_y(@wave_amplitude(0,@random(-0.3,-0.5)))
+#vel_y(@wave_amplitude(0,@random(-0.3,-0.5)))

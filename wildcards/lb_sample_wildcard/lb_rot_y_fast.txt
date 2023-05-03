@@ -1,0 +1,2 @@
+#rot_y(@random(70,90))
+#rot_y(@random(-70,-90))

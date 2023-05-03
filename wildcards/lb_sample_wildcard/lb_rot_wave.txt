@@ -1,0 +1,3 @@
+#rot(@wave_amplitude(0,@random(-30,30)))
+#rot(@wave_amplitude(0,@random(30,60)))
+#rot(@wave_amplitude(0,@random(-30,-60)))
