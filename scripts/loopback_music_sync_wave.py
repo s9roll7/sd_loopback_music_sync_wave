@@ -1564,7 +1564,7 @@ class Script(modules.scripts.Script):
 			elif seed_state == "subtracting":
 				p.seed = processed.seed - 1
 				
-			images.save_image(processed_img, p.outpath_samples, "", processed.seed, processed.prompt, info=processed.info, forced_filename=str(image_number), p=p)
+			images.save_image(processed_img, p.outpath_samples, "", processed.seed, processed.prompt, info=processed.info, save_to_dirs=False, forced_filename=str(image_number), p=p)
 
 			history.append(processed_img)
 
@@ -1572,7 +1572,7 @@ class Script(modules.scripts.Script):
 
 		grid = images.image_grid(history, rows=1)
 		if opts.grid_save:
-			images.save_image(grid, p.outpath_grids, "grid", initial_seed, p.prompt, opts.grid_format, info=initial_info, short_filename=not opts.grid_extended_filename, grid=True, p=p)
+			images.save_image(grid, p.outpath_grids, "grid", initial_seed, p.prompt, opts.grid_format, info=initial_info, save_to_dirs=False, short_filename=not opts.grid_extended_filename, grid=True, p=p)
 		grids.append(grid)
 
 		all_images += history

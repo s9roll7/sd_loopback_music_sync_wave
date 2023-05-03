@@ -41,11 +41,15 @@ def get_mask_from_sam(img:Image, prompt, box_th=0.3, padding=30):
 	
 	print("res from sam : ",res)
 
-	masks = []
-	for dct in res.json():
-		image_data = base64.b64decode(dct['image'])
-		image = Image.open(BytesIO(image_data))
-		masks.append(image)
-		#debug_save_img(image, "sam")
+	if res.status_code == 200:
+		masks = []
+		for dct in res.json():
+			image_data = base64.b64decode(dct['image'])
+			image = Image.open(BytesIO(image_data))
+			masks.append(image)
+			#debug_save_img(image, "sam")
+			return masks
+	else:
+		return None
 
-	return masks
+

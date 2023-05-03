@@ -10,9 +10,12 @@ def get_external_code():
 	global _external_code
 	if _external_code:
 		return _external_code
-	
-	if importlib.util.find_spec('extensions.sd-webui-controlnet.scripts.external_code'):
-		_external_code = importlib.import_module('extensions.sd-webui-controlnet.scripts.external_code', 'external_code')
+	try:
+		if importlib.util.find_spec('extensions.sd-webui-controlnet.scripts.external_code'):
+			_external_code = importlib.import_module('extensions.sd-webui-controlnet.scripts.external_code', 'external_code')
+	except Exception as e:
+		print(e)
+		print("import controlnet failed.")
 	return _external_code
 
 def initialize(p):
