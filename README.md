@@ -69,6 +69,15 @@ TODO
 
 <br>
 
+### How to replace the initial image in the middle of the process  
+- The initial image can be replaced on a wave-by-wave basis.  
+- Create an empty directory as a project directory and create a [video_frame_per_wave] directory in it.  
+- In it, put a png file with the name of the index of the wave you want to correspond to. For example, if you have [project_dir/video_frame_per_wave/2.png], the image will be switched at the timing of the wave with index 2.   
+- If the image contains png info, the prompt will also be overwritten.
+- It might be interesting to make a video with images you picked up at random somewhere.  
+
+<br>
+
 ### @#$function list  
 - The list of functions and how to write the wave list are described in [Cheat Sheet].  
 ![Cheat Sheet](imgs/cheat_sheet.png "Cheat Sheet")
