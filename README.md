@@ -9,9 +9,19 @@
 ## Example
 - The following sample is raw output of this extension.(The file was too large, so I compressed it.)  
 #### sample 1  
-
 <div><video controls src="https://user-images.githubusercontent.com/118420657/235941290-2708913c-16c0-4f3a-82db-7ab729ea7ea8.mp4" muted="false"></video></div>
+<br>
 
+#### sample 2  
+- Loopback mode(default) + Controlnet(open pose)  
+- All the parts except for the main prompt are taken from sample 1.  
+<div><video controls src="https://user-images.githubusercontent.com/118420657/236166342-6b2457a0-7d4e-4dd5-9964-0d3293c8dc9c.mp4" muted="false"></video></div>
+<br>
+
+#### sample 3  
+- img2img mode + Controlnet(open pose)  
+- The setting is exactly the same as sample2 except mode is changed to img2img.  
+<div><video controls src="https://user-images.githubusercontent.com/118420657/236167376-e914c244-c5fc-453d-9b20-32a80c53b9af.mp4" muted="false"></video></div>
 <br>
 
 ## Installation  
