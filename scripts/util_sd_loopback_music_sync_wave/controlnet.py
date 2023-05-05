@@ -19,7 +19,9 @@ def get_external_code():
 	return _external_code
 
 def initialize(p):
-	global _initialized, _controlnet_units
+	global _initialized, _controlnet_units, _current_stat
+	
+	_current_stat = None
 
 	external_code = get_external_code()
 	if not external_code:
