@@ -38,6 +38,7 @@
 - Lower the [Denoising strength]. (I recommend 0.25)  
 - Select [Loopback Music Sync Wave] in Script drop list  
 - Copy the following text into the [Wave List (Main)]  
+```
 0,wave  
 1000,wave  
 2000,wave  
@@ -46,10 +47,13 @@
 4000,wave  
 4500,wave  
 5000,end  
+```
 - Copy the following text into the [Extend Prompt (Main)]. The wildcards used below are those provided by default.  
--1::\_\_lb_vel_slow__  
--1::\_\_lb_zoom_wave__  
--1::\_\_lb_prompt_face__  
+```
+-1::__lb_vel_slow__  
+-1::__lb_zoom_wave__  
+-1::__lb_prompt_face__  
+```
 - Press [Generate]  
 - (Default file output location, video encoding settings, etc. are the same as in the original script)  
 
@@ -59,8 +63,83 @@
 ## Advanced Usage  
 
 ### How to generate video synchronized to music  
-TODO  
-- in [Loopback Music Sync Wave] tab, you can automatically generate a wave list. You can also compare prompts and audio waveforms.  
+1. Preparing music file  
+First, bring the music file. If you are not familiar with it, you may want to make it about 10 seconds long.  
+
+<br>
+
+2. Find the correct bpm for a music file  
+(See [Here](https://www.audionetwork.com/content/the-edit/expertise/what-is-bpm-and-how-to-find-it) for a description of bpm.)  
+If you know how to find bpm, please skip this section.  
+   - Enter the path to the music file in the following location.  
+   ![audio_file_path](imgs/audio_file_path.png "audio_file_path")  
+   - Press [Run] at the following location  
+   ![audio_analyzer_run](imgs/audio_analyzer_run.png "audio_analyzer_run")  
+Now we know the bpm and exact length in milliseconds. But this bpm is almost certainly not accurate.  
+Find the correct bpm by following these steps  
+   - Enter the values you just calculated for [BPM] and [End Time] and 1 for [Beat Per Wave].
+Cut off any fraction of a bpm.  
+   ![wave_list_generator](imgs/wave_list_generator.png "wave_list_generator")  
+   - Press [Generate]  
+   - The waveform image is generated at the bottom, so download it locally and enlarge it  
+   - Look at where the red line is drawn in the lower figure. This red line is the bpm interval.  
+   ![bpm_ng](imgs/bpm_ng.png "bpm_ng")  
+   - In this image, the red lines seem to be spaced too short. Decrease the value of [BPM] and press [Generate] again   
+   - Repeat this procedure to find the [BPM] value that results in the following.  
+   ![bpm_ok](imgs/bpm_ok.png "bpm_ok")  
+   - Finally, press [Generate Test Audio] to play the generated audio file and check if the metronome sound and music are not out of sync.  
+   ![generate_test_audio](imgs/generate_test_audio.png "generate_test_audio")  
+   
+<br>
+
+3. Generate wave list along bpm
+   - Enter the values obtained in the above procedure in the [BPM] and [End Time] fields.  
+   - Set [Beat Per Wave] to 4 for now. This makes one wave as long as 4 beats.  
+   - Press [Generate]  
+   ![wave_list_generator](imgs/wave_list_generator.png "wave_list_generator")  
+   - The automatically generated wave list is output to [Wave List] immediately below.  
+
+<br>
+
+4. Write prompt along the wave list
+   - Copy the wave list to [Wave List (Main)] in the [img2img] tab.  
+   - Enter the path of the music file in the [Sound File Path(optional)]  
+   ![main_wave_list](imgs/main_wave_list.png "main_wave_list")  
+   - write prompt in [Prompt Changes (Main)][Extend Prompt (Main)].Click on [Cheat Sheet] to see the format  
+   - Also, by using @function, you can also write how to change along the shape of the wave  
+```
+in [Extend Prompt (Main)]
+0,2,4::cat
+1::(smile:1.0)
+2::(smile:@wave_amplitude(0,1.0))
+3-5::#vel_x(@wave_amplitude(0.05,0.2))
+-1::__back_ground__, __animal__
+```
+
+<br>
+
+5. How to check prompts  
+Video generation takes a long time, so it is recommended to check the prompt before proceeding with the actual generation  
+   - Enter the music file path as you did in "Find the correct bpm" and press the [Run] button in Audio Analyzer.  
+   - Copy the wave list to the following location and enter the prompt you wish to check  
+   ![prompt_test](imgs/prompt_test.png "prompt_test")  
+   - Press [Prompt Test] to update the waveform image  
+   - Note that the numbers are normalized for graphical display. This function is for viewing a rough shape.  
+   - As an example, try the following prompt  
+```
+0,2,3::#vel_x(1)
+```
+   ![promt_test_ok](imgs/promt_test_ok.png "promt_test_ok")  
+```
+-1::#zoom(@wave_amplitude(@random(0.8,1.0),@random(1.3,1.6)))
+```
+   ![promt_test_ok2](imgs/promt_test_ok2.png "promt_test_ok2")  
+
+<br>
+
+6. Add sub wave list  
+[Wave List (Sub)] is an additional wave list that does not affect denoising strength.  
+It is recommended to use the wave list generated in [Beat Per Wave] 1 or the wave list generated in [Wave List(Generated from Onset Time)] in [Audio Analyzer]  
 
 <br>
 
@@ -96,8 +175,10 @@ TODO
 
 ### loopback + controlnet  
 - First, configure the control net itself as you normally use it, set it to enable, then configure the preprocessor and mode settings  
+- Create the initial image. Create a normal img2img image of the very first frame of the video and [Send to Img2Img]. You should set denoising strength to 0.7 or a higher value. Also, generate the image with the control net enabled.  
 - Specify the same path in [Project Directory(optional)] as specified in the frame creation procedure above.  
 - Make the following settings in [Mode Settings]
+- Change the denoising strength to a setting for video generation.  
 - Generate  
 
 ![lb_controlnet](imgs/lb_controlnet.png "lb_controlnet")
@@ -116,11 +197,11 @@ Put them in [extensions/sd_loopback_music_sync_wave/wildcards]. If you are too l
 - If you want to make a video only for the first 5 seconds in the test, temporarily add "5000, end" to the wave list entered in [Wave List (Main)]  
 - The unit of velocity for function parameters is the number of screens per second. For example, a speed of 1.0 in the x-axis direction means that if the screen moves at the same speed for one second, it will scroll one horizontal screen. In the case of rotation speed, it is the degree per second.  
 - There are three ways to increase the resolution.  
-A. Do img2img with a higher resolution from the beginning.  
-B. Use [Upscale Settings].  
-C. Upscale the generated video using an external tool.  
-A is probably the best way to get the best results, but it also takes the most processing time.
+  1. Do img2img with a higher resolution from the beginning.  
+  2. Use [Upscale Settings].  
+  3. Upscale the generated video using an external tool.  
+1 is probably the best way to get the best results, but it also takes the most processing time.
 - There are two ways to increase fps for smooth animation  
-A. Put a larger value in [Frames per second]  
-B. Interpolate with an external tool  
-A is very effective, but the processing time will be proportionally longer.  
+  1. Put a larger value in [Frames per second]  
+  2. Interpolate with an external tool  
+1 is very effective, but the processing time will be proportionally longer.  
