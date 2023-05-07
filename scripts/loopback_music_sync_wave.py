@@ -28,6 +28,7 @@ import scripts.util_sd_loopback_music_sync_wave.sam
 import scripts.util_sd_loopback_music_sync_wave.controlnet
 import scripts.util_sd_loopback_music_sync_wave.upscale
 from scripts.util_sd_loopback_music_sync_wave.regex import create_regex, create_regex_text
+import scripts.util_sd_loopback_music_sync_wave.raft
 
 skip_process_for_debug = False
 
@@ -418,11 +419,11 @@ def process_image(p, loopback_count, str_for_loopback, is_controlnet, img_for_co
 		p.denoising_strength = str_for_loopback
 	return processed
 
-def outpainting(p, img, org_mask_array, op_mask_blur, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet):
+def outpainting(p, img, org_mask_array, op_mask_blur, inpaint_full_res, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet):
 	p.init_images = [ img ]
 	p.mask_blur = op_mask_blur * 2
 	p.inpainting_fill = op_inpainting_fill
-	p.inpaint_full_res = False
+	p.inpaint_full_res = inpaint_full_res
 	p.denoising_strength = op_str
 	p.seed = op_seed
 
@@ -451,10 +452,62 @@ def outpainting(p, img, org_mask_array, op_mask_blur, op_inpainting_fill, op_str
 	else:
 		scripts.util_sd_loopback_music_sync_wave.controlnet.disable_controlnet(p)
 
+#	debug_save_img(img,"pre_out")
 	processed = processing.process_images(p)
+#	debug_save_img(processed.images[0],"post_out")
 
 	return processed.images[0]
 
+def apply_optical_flow(p, i, project_dir):
+	print("apply_optical_flow")
+
+	img = p.init_images[0]
+
+	def get_optical_flow_path(project_dir, i):
+		path = os.path.join(project_dir, "optical_flow")
+		path = os.path.join(path, f"{str(i).zfill(5)}.npy")
+		return path
+
+	o_path = get_optical_flow_path(project_dir, i)
+	if o_path and os.path.isfile(o_path):
+		return scripts.util_sd_loopback_music_sync_wave.raft.apply_flow(img, o_path)
+	else:
+		return p.init_images[0]	
+
+
+'''
+# too slow
+def apply_optical_flow(_p, i, project_dir, op_mask_blur, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet):
+	print("apply_optical_flow")
+	p = copy.copy(_p)
+
+	img = p.init_images[0].convert('RGBA')
+	img.putalpha(255)
+
+	def get_optical_flow_path(project_dir, i):
+		path = os.path.join(project_dir, "optical_flow")
+		path = os.path.join(path, f"{str(i).zfill(5)}.npy")
+		return path
+
+	o_path = get_optical_flow_path(project_dir, i)
+	if o_path and os.path.isfile(o_path):
+		img = scripts.util_sd_loopback_music_sync_wave.raft.apply_flow(img, o_path)
+	else:
+		return p.init_images[0]
+
+	org_mask_array = np.array(img)[:, :, 3]
+
+	if org_mask_array.min() == 255:
+		print("skip inpainting")
+		return img.convert("RGB")
+	
+	org_mask_array = 255 - org_mask_array
+	img = img.convert("RGB")
+
+	inpaint_full_res = False
+
+	return outpainting(p, img, org_mask_array, op_mask_blur, inpaint_full_res, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
+'''
 
 def affine_image(_p, op_mask_blur, op_inpainting_fill, op_str, op_seed, affine_input, is_controlnet, img_for_controlnet):
 	print("affine_image")
@@ -467,12 +520,14 @@ def affine_image(_p, op_mask_blur, op_inpainting_fill, op_str, op_seed, affine_i
 
 	if org_mask_array.min() == 255:
 		print("skip outpainting")
-		return img
+		return img.convert("RGB")
 
 	org_mask_array = 255 - org_mask_array
 	img = img.convert("RGB")
 
-	return outpainting(p, img, org_mask_array, op_mask_blur, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
+	inpaint_full_res = False
+	
+	return outpainting(p, img, org_mask_array, op_mask_blur, inpaint_full_res, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
 
 def apply_slide(_p, op_mask_blur, op_inpainting_fill, op_str, op_seed, slide_inputs, is_controlnet, img_for_controlnet):
 	print("apply_slide")
@@ -487,12 +542,14 @@ def apply_slide(_p, op_mask_blur, op_inpainting_fill, op_str, op_seed, slide_inp
 
 	if org_mask_array.min() == 255:
 		print("skip outpainting")
-		return img
+		return img.convert("RGB")
 
 	org_mask_array = 255 - org_mask_array
 	img = img.convert("RGB")
 
-	return outpainting(p, img, org_mask_array, op_mask_blur, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
+	inpaint_full_res = False
+
+	return outpainting(p, img, org_mask_array, op_mask_blur, inpaint_full_res, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
 
 
 def apply_inpaint(_p, mask_prompt, inpaint_prompt, op_mask_blur, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet):
@@ -510,7 +567,9 @@ def apply_inpaint(_p, mask_prompt, inpaint_prompt, op_mask_blur, op_inpainting_f
 
 	org_mask_array = np.asarray( masks[0] )
 
-	return outpainting(p, img, org_mask_array, op_mask_blur, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
+	inpaint_full_res = False
+
+	return outpainting(p, img, org_mask_array, op_mask_blur, inpaint_full_res, op_inpainting_fill, op_str, op_seed, is_controlnet, img_for_controlnet)
 
 
 def debug_info_suffix(mode_setting, base_denoising_strength, additional_denoising_strength, inner_lb_count, inner_lb_str):
@@ -1028,6 +1087,7 @@ class Script(modules.scripts.Script):
 		video_encoding = gr.Dropdown(label='Video encoding ', value="H.264 (mp4)", choices=["VP9 (webm)", "VP8 (webm)", "H.265 (mp4)", "H.264 (mp4)"])
 		
 		with gr.Accordion(label="Mode Settings", open=True):
+			use_optical_flow = gr.Checkbox(label='Use Optical Flow', value=False)
 			use_video_frame_for_controlnet_in_loopback_mode = gr.Checkbox(label='Use video_frame for controlnet in loopback mode', value=False)
 			mode_setting = gr.Radio(label='Mode', choices=["loopback","img2img"], value="loopback", type="value")
 			use_controlnet_for_lb = gr.Checkbox(label='Use Controlnet for loopback', value=False)
@@ -1057,10 +1117,10 @@ class Script(modules.scripts.Script):
 			segment_video = gr.Checkbox(label='Cut video in to segments ', value=False)
 			video_segment_duration = gr.Slider(minimum=10, maximum=60, step=1, label='Video Segment Duration (seconds)', value=20)
 
-		return [param_file_path, wave_list, sub_wave_list, project_dir, sound_file_path, mode_setting, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength]
+		return [param_file_path, wave_list, sub_wave_list, project_dir, sound_file_path, mode_setting, use_optical_flow, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength]
 
 		
-	def run(self, p, param_file_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, mode_setting, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength):
+	def run(self, p, param_file_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, mode_setting, use_optical_flow, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength):
 		calc_time_start = time.perf_counter()
 
 		processing.fix_seed(p)
@@ -1078,6 +1138,7 @@ class Script(modules.scripts.Script):
 				project_dir = params["project_dir"]
 				sound_file_path = params["sound_file_path"]
 				mode_setting = params["mode_setting"]
+				use_optical_flow = params["use_optical_flow"]
 				use_video_frame_for_controlnet_in_loopback_mode = params["use_video_frame_for_controlnet_in_loopback_mode"]
 				op_mask_blur = params["op_mask_blur"]
 				op_inpainting_fill = params["op_inpainting_fill"]
@@ -1182,6 +1243,7 @@ class Script(modules.scripts.Script):
 			params["project_dir"] = project_dir
 			params["sound_file_path"] = org_sound_file_path
 			params["mode_setting"] = mode_setting
+			params["use_optical_flow"] = use_optical_flow
 			params["use_video_frame_for_controlnet_in_loopback_mode"] = use_video_frame_for_controlnet_in_loopback_mode
 			params["op_mask_blur"] = op_mask_blur
 			params["op_inpainting_fill"] = op_inpainting_fill
@@ -1241,6 +1303,7 @@ class Script(modules.scripts.Script):
 					"",
 					f"Mode: {mode_setting}",
 					f"Use Video Frame for Controlnet in Loopback mode: {use_video_frame_for_controlnet_in_loopback_mode}",
+					f"Use Optical Flow: {use_optical_flow}",
 					f"Use Controlnet for LoopBack: {use_controlnet_for_lb}",
 					f"Use Controlnet for img2img: {use_controlnet_for_img2img}",
 					f"Use Controlnet for inpaint: {use_controlnet_for_inpaint}",
@@ -1382,6 +1445,16 @@ class Script(modules.scripts.Script):
 
 		us_map = {}
 
+		if use_optical_flow:
+			frame_path = get_video_frame_path(project_dir, 0)
+			if frame_path and os.path.isfile(frame_path):
+				v_path = os.path.join(project_dir, "video_frame")
+				o_path = os.path.join(project_dir, "optical_flow")
+				scripts.util_sd_loopback_music_sync_wave.raft.create_optical_flow(v_path, o_path)
+			else:
+				print("video frame not found -> use_optical_flow = False")
+				use_optical_flow = False
+
 		# generation loop
 		while True:
 
@@ -1500,6 +1573,15 @@ class Script(modules.scripts.Script):
 						print("use_video_frame_for_controlnet_in_loopback_mode failed.")
 
 			op_seed = p.seed if mode_setting == "loopback" else seed_for_img2img_outpainting
+
+
+			# optical flow
+			if use_optical_flow:
+				'''
+				state.job_count += 1
+				p.init_images = [ apply_optical_flow(p, i, project_dir, op_mask_blur, op_inpainting_fill, op_str, op_seed, use_controlnet_for_outpaint, control_net_input_image)]
+				'''
+				p.init_images = [ apply_optical_flow(p, i, project_dir)]
 
 			# affine
 			if is_affine_need:
