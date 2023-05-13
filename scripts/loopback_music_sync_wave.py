@@ -1669,15 +1669,13 @@ class Script(modules.scripts.Script):
 
 			control_net_input_image = None
 
-			if mode_setting == "loopback":
-				if use_video_frame_for_controlnet_in_loopback_mode:
-					frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
-					if frame_path and os.path.isfile(frame_path):
-						#org_frame = image_open_and_resize(frame_path, p.width, p.height)
-						control_net_input_image = frame_path
-					else:
-						print("!!!!!!!!!!!!! Warning! File not found : ",frame_path)
-						print("use_video_frame_for_controlnet_in_loopback_mode failed.")
+			if ((mode_setting == "loopback") and use_video_frame_for_controlnet_in_loopback_mode) or (mode_setting == "img2img"):
+				frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
+				if frame_path and os.path.isfile(frame_path):
+					#org_frame = image_open_and_resize(frame_path, p.width, p.height)
+					control_net_input_image = frame_path
+				else:
+					print("!!!!!!!!!!!!! Warning! File for control_net_input_image not found : ",frame_path)
 
 			op_seed = p.seed if mode_setting == "loopback" else seed_for_img2img_outpainting
 
