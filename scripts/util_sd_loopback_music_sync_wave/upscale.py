@@ -35,7 +35,7 @@ def upscale(p, us_map, output_path, us_width, us_height, us_method, us_denoising
 	total = len(us_map)
 
 	for i,img_no in enumerate(us_map):
-		img_path = os.path.join(p.outpath_samples, f"{img_no}.png")
+		img_path = os.path.join(p.outpath_samples, f"{str(img_no).zfill(5)}.png")
 		if not os.path.isfile(img_path):
 			print("warning file not found : ",img_path)
 			continue
@@ -60,7 +60,7 @@ def upscale(p, us_map, output_path, us_width, us_height, us_method, us_denoising
 
 			resized_img = processed.images[0]
 
-		images.save_image(resized_img, output_path, "", _seed, _prompt, info=_info, save_to_dirs=False, forced_filename=str(img_no), p=p)
+		images.save_image(resized_img, output_path, "", _seed, _prompt, info=_info, save_to_dirs=False, forced_filename=str(img_no).zfill(5), p=p)
 
 		print(f"{i}/{total}")
 	

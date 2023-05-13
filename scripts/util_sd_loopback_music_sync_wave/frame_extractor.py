@@ -44,6 +44,32 @@ def frame_extract_all(fe_project_dir:str, fe_movie_path:str, fe_ffmpeg_path:str,
 
 	return " "
 
+def frame_extract_one(fe_project_dir:str, fe_movie_path:str, fe_ffmpeg_path:str):
+
+	if (not fe_project_dir) or (not os.path.isdir(fe_project_dir)):
+		print("Directory not found : ", fe_project_dir)
+		return " "
+	
+	if (not fe_movie_path) or (not os.path.isfile(fe_movie_path)):
+		print("File not found : ", fe_movie_path)
+		return " "
+	
+	extract_dir = fe_project_dir
+
+	args = [
+		"-i", fe_movie_path,
+		"-frames:v",1,
+		os.path.join(extract_dir, "00000.png")
+	]
+
+	if(fe_ffmpeg_path == ""):
+		fe_ffmpeg_path = "ffmpeg"
+		if(platform.system == "Windows"):
+			fe_ffmpeg_path += ".exe"
+
+	run_cmd([fe_ffmpeg_path] + args)
+
+	return " "
 
 def frame_extract_per_wave(fe_project_dir:str, fe_movie_path:str, fe_ffmpeg_path:str, wave_list_str:str):
 

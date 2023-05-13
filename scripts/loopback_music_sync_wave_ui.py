@@ -8,7 +8,7 @@ from scripts.loopback_music_sync_wave import get_wave_type_list,str_to_wave_list
 from scripts.util_sd_loopback_music_sync_wave.wave_generator import wave_generator_process
 from scripts.util_sd_loopback_music_sync_wave.audio_analyzer import audio_analyzer_process
 from scripts.util_sd_loopback_music_sync_wave.wave_list_test import wave_list_test_process
-from scripts.util_sd_loopback_music_sync_wave.frame_extractor import frame_extract_all,frame_extract_per_wave
+from scripts.util_sd_loopback_music_sync_wave.frame_extractor import frame_extract_one,frame_extract_per_wave
 from scripts.util_sd_loopback_music_sync_wave.prompt_test import prompt_test_process
 
 def on_ui_tabs():
@@ -112,11 +112,9 @@ def on_ui_tabs():
 					fe_ffmpeg_path = gr.Textbox(label="ffmpeg binary.	Only set this if it fails otherwise.", lines=1, value="")
 					
 				with gr.Tabs():
-					with gr.TabItem('Frame Extract For Controlnet or img2img'):	
-						all_extract_fps = gr.Slider(minimum=1, maximum=120, step=1, label='Frames per second(This must exactly match the fps setting in img2img script setting)', value=24)
+					with gr.TabItem('Extract first frame'):	
 						with gr.Row():
-							all_extract_btn = gr.Button('Extract', variant='primary')
-
+							extract_one_btn = gr.Button('Extract', variant='primary')
 					with gr.TabItem('Frame Extract For Initial image switching per wave'):
 						with gr.Row():
 							per_wave_extract_list_txt = gr.Textbox(label='Wave List', lines=30, interactive=True)
@@ -210,20 +208,19 @@ def on_ui_tabs():
 			)
 			test_generate_btn2.click(**test_gen2_args)
 
-			fe_all_gen_args = dict(
-				fn=wrap_gradio_gpu_call(frame_extract_all),
+			fe_one_gen_args = dict(
+				fn=wrap_gradio_gpu_call(frame_extract_one),
 				inputs=[
 					fe_project_dir,
 					fe_movie_path,
 					fe_ffmpeg_path,
-					all_extract_fps,
 				],
 				outputs=[
 					html_info
 				],
 				show_progress=False,
 			)
-			all_extract_btn.click(**fe_all_gen_args)
+			extract_one_btn.click(**fe_one_gen_args)
 
 			fe_per_wave_gen_args = dict(
 				fn=wrap_gradio_gpu_call(frame_extract_per_wave),

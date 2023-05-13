@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 import cv2
 import torch
+import time
 
 from torchvision.models.optical_flow import Raft_Large_Weights
 from torchvision.models.optical_flow import raft_large
@@ -35,32 +36,94 @@ def pathlist_to_stack(img_path_list):
 	vframes = vframes.permute(0, 3, 1, 2)
 	return vframes
 
+def remove_files_in_dir(path, pattern):
+    if not os.path.isdir(path):
+        return
+    pngs = glob.glob( os.path.join(path, pattern) )
+    for png in pngs:
+        os.remove(png)
 
-def create_optical_flow(v_path, o_path):
+
+#############
+# from https://github.com/princeton-vl/RAFT/issues/57
+#############
+def bilinear_sampler(img, coords, mode='bilinear', mask=False):
+    """ Wrapper for grid_sample, uses pixel coordinates """
+    H, W = img.shape[-2:]
+    xgrid, ygrid = coords.split([1,1], dim=-1)
+    xgrid = 2*xgrid/(W-1) - 1
+    ygrid = 2*ygrid/(H-1) - 1
+
+    grid = torch.cat([xgrid, ygrid], dim=-1)
+    img = torch.nn.functional.grid_sample(img, grid, align_corners=True)
+
+    if mask:
+        mask = (xgrid > -1) & (ygrid > -1) & (xgrid < 1) & (ygrid < 1)
+        return img, mask.float()
+
+    return img
+
+def coords_grid(batch, ht, wd, device="cpu"):
+    coords = torch.meshgrid(torch.arange(ht, device=device), torch.arange(wd, device=device))
+    coords = torch.stack(coords[::-1], dim=0).float()
+    return coords[None].repeat(batch, 1, 1, 1)
+
+
+def create_occ_mask(v1,v2,size,device,thresh = 2.0):
+    H,W = size
+    
+    coords0 = coords_grid(1, H, W, device)
+    coords1 = coords0 + v1
+    coords2 = coords1 + bilinear_sampler(v2, coords1.permute(0,2,3,1))
+    
+    err = (coords0 - coords2).norm(dim=1)
+    occ = (err[0] > thresh).float().cpu().numpy()
+    
+    return occ * 255
+#############
+    
+
+
+def create_optical_flow(v_path, o_path, m_path, use_cache, size_hw=None):
 	from modules import devices
 
 	os.makedirs(o_path, exist_ok=True)
 
-	npys = glob.glob( os.path.join(o_path ,"[0-9]*.npy"), recursive=False)
-	if npys:
-		print("npy file found. skip create optical flow")
-		return
+	if m_path:
+		os.makedirs(m_path, exist_ok=True)
+
+	if use_cache:
+		npys = glob.glob( os.path.join(o_path ,"[0-9]*.npy"), recursive=False)
+		if npys:
+			print("npy file found. skip create optical flow")
+			return
+	else:
+		remove_files_in_dir(o_path, "*.npy")
+		if m_path:
+			remove_files_in_dir(m_path, "*.png")
 
 	pngs = glob.glob( os.path.join(v_path ,"[0-9]*.png"), recursive=False)
+
+	devices.torch_gc()
 
 	weights = Raft_Large_Weights.DEFAULT
 	transforms = weights.transforms()
 
 	print("create_optical_flow")
 	
-	def preprocess(img1_path, img2_path):
-		h, w, _ = np.array(Image.open(img1_path[0])).shape
+	if size_hw:
+		h, w= size_hw
+	else:
+		h, w, _ = np.array(Image.open(pngs[0])).shape
+	H = h//8*8
+	W = w//8*8
 
+	def preprocess(img1_path, img2_path):
 		img1_batch = pathlist_to_stack(img1_path)
 		img2_batch = pathlist_to_stack(img2_path)
 
-		img1_batch = F.resize(img1_batch, size=[h//8*8, w//8*8], antialias=False)
-		img2_batch = F.resize(img2_batch, size=[h//8*8, w//8*8], antialias=False)
+		img1_batch = F.resize(img1_batch, size=[H, W], antialias=False)
+		img2_batch = F.resize(img2_batch, size=[H, W], antialias=False)
 
 		return transforms(img1_batch, img2_batch)
 
@@ -80,35 +143,36 @@ def create_optical_flow(v_path, o_path):
 			list_of_flows = model(img1_batch.to(device), img2_batch.to(device))
 
 		predicted_flows = list_of_flows[-1]
-		
-		'''
-		predicted_flows = predicted_flows.to("cpu").detach()
 
-		for j in range(len(predicted_flows)):
-			fl = predicted_flows[j]
+		if m_path:
+			with torch.no_grad():
+				rev_list_of_flows = model(img2_batch.to(device), img1_batch.to(device))
 
-			im = flow_to_image(fl)
+			rev_predicted_flows = rev_list_of_flows[-1]
 
-			out_path = os.path.join(o_path, f"{str(i+j + 1).zfill(5)}.png")
+			for j in range(len(predicted_flows)):
+				fl = predicted_flows[j]
+				rev_fl = rev_predicted_flows[j]
 
-			F.to_pil_image(im).save( out_path )
+				fl = fl.permute(0, 1, 2).unsqueeze(0).contiguous()
+				rev_fl = rev_fl.permute(0, 1, 2).unsqueeze(0).contiguous()
 
-			print("output : ", out_path)
-		'''
+				occ = create_occ_mask(fl,rev_fl,(H,W), device)
+				out_path = os.path.join(m_path, f"{str(i+j + 1).zfill(5)}.png")
+				Image.fromarray(occ).convert("L").save(out_path)
 
 		predicted_flows = predicted_flows.to("cpu").detach().numpy()
 
 		for j in range(len(predicted_flows)):
 			fl = predicted_flows[j]
 			out_path = os.path.join(o_path, f"{str(i+j + 1).zfill(5)}.npy")
-			#torch.save(fl, out_path)
 			np.save(out_path, fl)
 			print("output : ", out_path)
 
 	devices.torch_gc()
 
 
-def apply_flow1(processed_img, flow):
+def warp_img(processed_array, flow):
 	flow = flow.transpose(1,2,0)
 
 	h = flow.shape[0]
@@ -117,77 +181,145 @@ def apply_flow1(processed_img, flow):
 	flow[:,:,0] += np.arange(w)
 	flow[:,:,1] += np.arange(h)[:,np.newaxis]
 
-	processed_array = np.array(processed_img)
-
 	org_h,org_w,_ = processed_array.shape
 
 	processed_array = resize_img_array(processed_array, w, h)
 
-
 	result = cv2.remap(processed_array, flow, None, cv2.INTER_LINEAR)
 
+	return resize_img_array(result, org_w, org_h)
 
-	result = Image.fromarray(resize_img_array(result, org_w, org_h))
-	return result
-
-# https://github.com/MCG-NKU/AMT/blob/main/utils/flow_utils.py
-def _warp(img, flow):
-	B, _, H, W = flow.shape
-	xx = torch.linspace(-1.0, 1.0, W).view(1, 1, 1, W).expand(B, -1, H, -1)
-	yy = torch.linspace(-1.0, 1.0, H).view(1, 1, H, 1).expand(B, -1, -1, W)
-	grid = torch.cat([xx, yy], 1).to(img)
-	flow_ = torch.cat([flow[:, 0:1, :, :] / ((W - 1.0) / 2.0), flow[:, 1:2, :, :] / ((H - 1.0) / 2.0)], 1)
-	grid_ = (grid + flow_).permute(0, 2, 3, 1)
-	output = torch.nn.functional.grid_sample(input=img, grid=grid_, mode='bilinear', padding_mode='border', align_corners=True)
-	return output
-
-def apply_flow2(processed_img, flow):
-	_, H, W = flow.shape
-
-	x = np.array(processed_img)
-	ORG_H,ORG_W,_ = x.shape
-	x = resize_img_array(x, W, H)
-
-	torch_x = torch.as_tensor(x.astype("float32")).div(255).permute(2, 1, 0).unsqueeze(0).contiguous()
-	torch_flow = torch.as_tensor(flow).permute(0, 2, 1).unsqueeze(0).contiguous()
-
-	warped = _warp(torch_x, torch_flow)
-
-	result = warped.squeeze(0).mul(255).permute(2, 1, 0).numpy().astype("uint8")
-
-	result = resize_img_array(result, ORG_W, ORG_H)
-
-	return Image.fromarray(result)
-
-
-def apply_flow(processed_img, o_path):
-	img = processed_img.convert('RGBA')
-	img.putalpha(255)
+def apply_flow_single(processed_img, o_path, is_reverse = False, add_flow_path = None, rate = 0.0, use_inpaint = True):
+	if use_inpaint:
+		img = processed_img.convert('RGBA')
+		img.putalpha(255)
+	else:
+		img = processed_img
 
 	flow = np.load(o_path)
 
-#	debug_save_img(processed_img, "pre")
-	a = apply_flow1(img, flow)
-
-	org_mask_array = np.array(a)[:, :, 3]
-
-	if org_mask_array.min() == 255:
-		print("skip inpainting")
-		return a.convert("RGB")
+	if is_reverse:
+		flow = -flow
 	
-	b = apply_flow2(processed_img, flow)
-#	debug_save_img(b, "back")
+	if add_flow_path:
+		add_flow = np.load(add_flow_path)
+		if is_reverse:
+			add_flow = -add_flow
+		add_flow = add_flow * rate
+
+#		flow = flow * 0.5 + add_flow * 0.5
+		th = np.mean(np.abs(flow)) / 2
+		mask = (np.abs(flow) < th)
+		np.putmask( flow, mask, add_flow)
+
+#	debug_save_img(img, "pre")
+	a_array = warp_img(np.array(img), flow)
+
+	if use_inpaint:
+		org_mask_array = a_array[:, :, 3]
+		org_mask_array = 255 - org_mask_array
+
+		a_array = cv2.inpaint(a_array[:, :, 0:3],org_mask_array,3,cv2.INPAINT_TELEA)
+
+	return Image.fromarray(a_array)
+
+
+def apply_flow(base_img, flow_path_list, mask_path_list):
+
+	img = base_img
+	W, H = img.size
+	mask_array = None
+
+	for f,m in zip(flow_path_list, mask_path_list):
+		if not os.path.isfile(f):
+			return img, mask_array
+		img = apply_flow_single(img, f, False, None, 0, False)
+		
+		if mask_array is None:
+			mask_array = np.array(Image.open(m))
+		else:
+			mask_array = mask_array + np.array(Image.open(m))
+
+	return img, cv2.resize( mask_array, (W,H), interpolation = cv2.INTER_CUBIC)
+
+
+def interpolate_frame(head_img, tail_img, cur_flow, add_flow):
+	list_a = []
+	list_b = []
+
+	img = head_img
+	i = 0
+	for f in cur_flow[:-1]:
+		img = apply_flow_single(img, f, False, add_flow, (i+1)/ len(cur_flow))
+		list_a.append(img)
+
+	img = tail_img
+	i = 0
+	for f in cur_flow[:0:-1]:
+		img = apply_flow_single(img, f, True, add_flow, (i+1)/ len(cur_flow))
+		list_b.append(img)
 	
-	org_mask_array = 255 - org_mask_array
-	mask_img = Image.fromarray(org_mask_array)
+	result = [head_img]
+	i = 0
 
-	img = a.convert("RGB")
-#	debug_save_img(img, "fwd")
+	for h,t in zip(list_a, list_b[::-1]):
+		i_frame = Image.blend(h,t, (i+1)/ len(cur_flow) )
+		result.append( i_frame )
+		i+=1
 
-	img = Image.composite(b, img, mask_img)
+	return result
 
-#	debug_save_img(mask_img, "mask")
-#	debug_save_img(img, "result")
+def interpolate(org_frame_path, out_frame_path, flow_interpolation_multi, flow_path ):
 
-	return img
+	print("interpolate start")
+
+	calc_time_start = time.perf_counter()
+
+	org_frames = sorted(glob.glob( os.path.join(org_frame_path ,"[0-9]*.png"), recursive=False))
+	flows = sorted(glob.glob( os.path.join(flow_path ,"[0-9]*.npy"), recursive=False))
+	_, FLOW_H, FLOW_W = np.load(flows[0]).shape	# 2, H, W
+
+	flows = iter(flows)
+
+	tmp_flow_path = os.path.join(org_frame_path ,"tmp_flow")
+	create_optical_flow(org_frame_path, tmp_flow_path, None, False, (FLOW_H, FLOW_W) )
+
+	tmp_flows = sorted(glob.glob( os.path.join(tmp_flow_path ,"[0-9]*.npy"), recursive=False))
+
+	tmp_flows = iter(tmp_flows)
+
+	os.makedirs(out_frame_path, exist_ok=True)
+
+	i = 0
+	tail_img=None
+
+	for head, tail in zip(org_frames, org_frames[1:]):
+		cur_flow = [next(flows, None) for x in range(flow_interpolation_multi)]
+
+		cur_flow = [ x for x in cur_flow if i is not None]
+
+		tmp_flow = next(tmp_flows, None)
+
+		head_img = Image.open( head )
+		tail_img = Image.open( tail )
+
+		result_imgs = interpolate_frame(head_img, tail_img, cur_flow, tmp_flow)
+
+		for f in result_imgs:
+			output_img_path = os.path.join(out_frame_path, f"{str(i).zfill(5)}.png" )
+			f.save( output_img_path )
+
+			print("output : ",i)
+
+			i += 1
+	
+	output_img_path = os.path.join(out_frame_path, f"{str(i).zfill(5)}.png" )
+	tail_img.save( output_img_path )
+
+	print("output : ",i)
+
+	calc_time_end = time.perf_counter()
+	print("interpolate elapsed_time (sec) : ", calc_time_end - calc_time_start)	
+
+
 
