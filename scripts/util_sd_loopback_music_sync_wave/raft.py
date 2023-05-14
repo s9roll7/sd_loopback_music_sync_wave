@@ -84,7 +84,7 @@ def create_occ_mask(v1,v2,size,device,thresh = 2.0):
     
 
 
-def create_optical_flow(v_path, o_path, m_path, use_cache, size_hw=None):
+def create_optical_flow(v_path, o_path, m_path, use_cache, size_hw=None, occ_th=2.0):
 	from modules import devices
 
 	os.makedirs(o_path, exist_ok=True)
@@ -157,7 +157,7 @@ def create_optical_flow(v_path, o_path, m_path, use_cache, size_hw=None):
 				fl = fl.permute(0, 1, 2).unsqueeze(0).contiguous()
 				rev_fl = rev_fl.permute(0, 1, 2).unsqueeze(0).contiguous()
 
-				occ = create_occ_mask(fl,rev_fl,(H,W), device)
+				occ = create_occ_mask(fl,rev_fl,(H,W), device, occ_th)
 				out_path = os.path.join(m_path, f"{str(i+j + 1).zfill(5)}.png")
 				Image.fromarray(occ).convert("L").save(out_path)
 
@@ -185,7 +185,7 @@ def warp_img(processed_array, flow):
 
 	processed_array = resize_img_array(processed_array, w, h)
 
-	result = cv2.remap(processed_array, flow, None, cv2.INTER_LINEAR)
+	result = cv2.remap(processed_array, flow, None, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
 
 	return resize_img_array(result, org_w, org_h)
 

@@ -54,4 +54,30 @@ def wave_generator_process(bpm: float, beat_per_wave:int, start_msec:int, end_ms
 	return "\n".join(wave_str_list), fig, " "
 
 
+def f2w_generator_process(fps:int, default_type:str, default_strength:float, f2w_frame_list_txt:str):
+	f2w_frame_list_txt = f2w_frame_list_txt.strip()
+
+	frames = f2w_frame_list_txt.split(",")
+
+	wave_list=[]
+
+	for i,f in enumerate( frames ):
+		msec = int(f) * 1000 / fps
+
+		if i == 0 and msec != 0:
+			wave_list.append( ( 0, default_type, default_strength ) )
+
+		wave_list.append( ( int(msec), default_type, default_strength ) )
+	
+	wave_list[-1] = (wave_list[-1][0],"end")
+
+	wave_str_list=[]
+
+	for w in wave_list:
+		if w[1] in ("zero", "end") or w[2] == 1.0:
+			wave_str_list.append( f"{w[0]},{w[1]}" )
+		else:
+			wave_str_list.append( f"{w[0]},{w[1]},{w[2]}" )
+
+	return "\n".join(wave_str_list)," "
 

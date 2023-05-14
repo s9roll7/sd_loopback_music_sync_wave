@@ -1156,9 +1156,11 @@ class Script(modules.scripts.Script):
 		
 		with gr.Accordion(label="Optical Flow Settings", open=True):
 			use_optical_flow = gr.Checkbox(label='Use Optical Flow', value=False)
+			use_optical_flow_cache = gr.Checkbox(label='Use Optical Flow Cache', value=True)
 			flow_interpolation_multi = gr.Slider(minimum=1, maximum=5, step=1, label='Interpolation Multiplier', value=1)
 			flow_inpaint_method = gr.Radio(label='Optical Flow Inpaint Method ', choices=["cv2","sd","cv2 + sd"], value="cv2 + sd", type="index")
 			flow_occ_area_th = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Occlusion area threshold for(cv2 + sd)', value=0.05)
+			flow_occ_detect_th = gr.Slider(minimum=0.1, maximum=5.0, step=0.01, label='Occlusion area detection threshold', value=2.0)
 
 		with gr.Accordion(label="OutPainting Setting", open=True):
 			op_mask_blur = gr.Slider(label='Mask blur', minimum=0, maximum=64, step=1, value=4, elem_id=self.elem_id("mask_blur"))
@@ -1183,10 +1185,10 @@ class Script(modules.scripts.Script):
 			segment_video = gr.Checkbox(label='Cut video in to segments ', value=False)
 			video_segment_duration = gr.Slider(minimum=10, maximum=60, step=1, label='Video Segment Duration (seconds)', value=20)
 
-		return [param_file_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness]
+		return [param_file_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness]
 
 		
-	def run(self, p, param_file_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness):
+	def run(self, p, param_file_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness):
 		calc_time_start = time.perf_counter()
 
 		processing.fix_seed(p)
@@ -1205,9 +1207,11 @@ class Script(modules.scripts.Script):
 				video_file_path = params["video_file_path"]
 				mode_setting = params["mode_setting"]
 				use_optical_flow = params["use_optical_flow"]
+				use_optical_flow_cache = params["use_optical_flow_cache"]
 				flow_interpolation_multi = params["flow_interpolation_multi"]
 				flow_inpaint_method = params["flow_inpaint_method"]
 				flow_occ_area_th = params["flow_occ_area_th"]
+				flow_occ_detect_th = params["flow_occ_detect_th"]
 				use_video_frame_for_controlnet_in_loopback_mode = params["use_video_frame_for_controlnet_in_loopback_mode"]
 				op_mask_blur = params["op_mask_blur"]
 				op_inpainting_fill = params["op_inpainting_fill"]
@@ -1330,9 +1334,11 @@ class Script(modules.scripts.Script):
 			params["video_file_path"] = video_file_path
 			params["mode_setting"] = mode_setting
 			params["use_optical_flow"] = use_optical_flow
+			params["use_optical_flow_cache"] = use_optical_flow_cache
 			params["flow_interpolation_multi"] = flow_interpolation_multi
 			params["flow_inpaint_method"] = flow_inpaint_method
 			params["flow_occ_area_th"] = flow_occ_area_th
+			params["flow_occ_detect_th"] = flow_occ_detect_th
 			params["use_video_frame_for_controlnet_in_loopback_mode"] = use_video_frame_for_controlnet_in_loopback_mode
 			params["op_mask_blur"] = op_mask_blur
 			params["op_inpainting_fill"] = op_inpainting_fill
@@ -1396,7 +1402,6 @@ class Script(modules.scripts.Script):
 					"",
 					f"Mode: {mode_setting}",
 					f"Use Video Frame for Controlnet in Loopback mode: {use_video_frame_for_controlnet_in_loopback_mode}",
-					f"Use Optical Flow: {use_optical_flow}",
 					f"Use Controlnet for LoopBack: {use_controlnet_for_lb}",
 					f"Use Controlnet for img2img: {use_controlnet_for_img2img}",
 					f"Use Controlnet for inpaint: {use_controlnet_for_inpaint}",
@@ -1405,9 +1410,11 @@ class Script(modules.scripts.Script):
 					"",
 					"Optical Flow Settings",
 					f"Use Optical Flow: {use_optical_flow}",
+					f"Use Optical Flow Cache: {use_optical_flow_cache}",
 					f"Interpolation Multiplier: {flow_interpolation_multi}",
 					f"Inpaint Method: {flow_inpaint_method}",
 					f"Occlusion area threshold for (cv2 + sd): {flow_occ_area_th}",
+					f"Occlusion area detection threshold: {flow_occ_detect_th}",
 					"",
 					f"OutPainting Mask blur: {op_mask_blur}",
 					f"OutPainting Masked content: {op_inpainting_fill}",
@@ -1559,7 +1566,7 @@ class Script(modules.scripts.Script):
 				v_path = os.path.join(project_dir, "video_frame")
 				o_path = os.path.join(os.path.join(project_dir, "optical_flow"), f"{fps * flow_interpolation_multi}")
 				m_path = os.path.join(os.path.join(project_dir, "occ_mask"), f"{fps * flow_interpolation_multi}")
-				scripts.util_sd_loopback_music_sync_wave.raft.create_optical_flow(v_path, o_path, m_path, True)
+				scripts.util_sd_loopback_music_sync_wave.raft.create_optical_flow(v_path, o_path, m_path, use_optical_flow_cache, None, flow_occ_detect_th)
 			else:
 				print("video frame not found -> use_optical_flow = False")
 				use_optical_flow = False

@@ -5,7 +5,7 @@ from modules import script_callbacks
 from modules.call_queue import wrap_gradio_gpu_call
 
 from scripts.loopback_music_sync_wave import get_wave_type_list,str_to_wave_list,wave_list_to_str,merge_wave_list
-from scripts.util_sd_loopback_music_sync_wave.wave_generator import wave_generator_process
+from scripts.util_sd_loopback_music_sync_wave.wave_generator import wave_generator_process,f2w_generator_process
 from scripts.util_sd_loopback_music_sync_wave.audio_analyzer import audio_analyzer_process
 from scripts.util_sd_loopback_music_sync_wave.wave_list_test import wave_list_test_process
 from scripts.util_sd_loopback_music_sync_wave.frame_extractor import frame_extract_one,frame_extract_per_wave
@@ -58,6 +58,30 @@ def on_ui_tabs():
 											prompt_test_txt = gr.Textbox(label='Input Prompt you want to test(Extend Prompt format)', lines=5, interactive=True)
 										with gr.Row():
 											prompt_test_btn = gr.Button('Prompt Test', variant='primary')
+
+								with gr.TabItem('Frame List To Wave List'):
+									with gr.Accordion(label="Input", open=True):
+										f2w_fps = gr.Slider(minimum=1, maximum=240, step=1, label='FPS including interpolated frames', value=24)
+										gr.HTML(value="<p style='margin-bottom: 1.2em'>\
+														[Frames per second] x [Optical Flow Settings -> Interpolation Multiplier] = FPS including interpolated frames \
+														</p>")
+										sels = get_wave_type_list()
+										f2w_default_type = gr.Radio(label='Default Wave Type', choices=sels, value=sels[2], type="value")
+										f2w_default_strength = gr.Slider(minimum=0, maximum=3.0, step=0.1, label='Default Wave Strength', value=1.0)
+										with gr.Row():
+											f2w_frame_list_txt = gr.Textbox(label='Frame List', lines=5, interactive=True)
+										gr.HTML(value="<p style='margin-bottom: 1.2em'>\
+														Example: If you want the 160th, 354th, 1125th, and 1650th frames to be the beginning of the wave in a video that has 2000 frames in total when calculated at the fps specified above \
+														<br>\
+														160,354,1125,1650,2000\
+														</p>")
+									with gr.Row():
+										f2w_generate_btn = gr.Button('Generate', variant='primary')
+									
+									with gr.Accordion(label="Result", open=True):
+										with gr.Row():
+											f2w_wave_list_txt = gr.Textbox(label='Wave List', lines=30, interactive=True)
+
 
 							with gr.Tabs(elem_id="lmsw_settings2"):
 								with gr.TabItem('Audio Analyzer'):
@@ -207,6 +231,23 @@ def on_ui_tabs():
 				show_progress=False,
 			)
 			test_generate_btn2.click(**test_gen2_args)
+
+			f2w_gen_args = dict(
+				fn=wrap_gradio_gpu_call(f2w_generator_process),
+				inputs=[
+					f2w_fps,
+					f2w_default_type,
+					f2w_default_strength,
+					f2w_frame_list_txt,
+				],
+				outputs=[
+					f2w_wave_list_txt,
+					html_info
+				],
+				show_progress=False,
+			)
+			f2w_generate_btn.click(**f2w_gen_args)
+
 
 			fe_one_gen_args = dict(
 				fn=wrap_gradio_gpu_call(frame_extract_one),
