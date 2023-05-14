@@ -196,6 +196,10 @@ def apply_flow_single(processed_img, o_path, is_reverse = False, add_flow_path =
 	else:
 		img = processed_img
 
+	if not o_path:
+		print("o_path is empty")
+		return processed_img
+	
 	flow = np.load(o_path)
 
 	if is_reverse:
@@ -232,7 +236,7 @@ def apply_flow(base_img, flow_path_list, mask_path_list):
 
 	for f,m in zip(flow_path_list, mask_path_list):
 		if not os.path.isfile(f):
-			return img, mask_array
+			return img, cv2.resize( mask_array, (W,H), interpolation = cv2.INTER_CUBIC) if mask_array is not None else None
 		img = apply_flow_single(img, f, False, None, 0, False)
 		
 		if mask_array is None:
@@ -240,7 +244,7 @@ def apply_flow(base_img, flow_path_list, mask_path_list):
 		else:
 			mask_array = mask_array + np.array(Image.open(m))
 
-	return img, cv2.resize( mask_array, (W,H), interpolation = cv2.INTER_CUBIC)
+	return img, cv2.resize( mask_array, (W,H), interpolation = cv2.INTER_CUBIC) if mask_array is not None else None
 
 
 def interpolate_frame(head_img, tail_img, cur_flow, add_flow):
