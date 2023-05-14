@@ -45,8 +45,25 @@ def get_external_code():
 		print("import controlnet failed.")
 	return cn_stat["external_code"]
 
+def load_unit(path):
+	external_code = get_external_code()
+	if not external_code:
+		return
 
-def initialize(p, cache_dir):
+	params = {}
+	with open(path, "r") as f:
+		params = json.load(f)
+
+		try:
+			for i,(key,c) in enumerate( zip(params,cn_stat["controlnet_units"])):
+				cn_stat["controlnet_units"][i] = external_code.ControlNetUnit(**params[key])
+		except Exception as e:
+			print(e)
+			print("load controlnet unit failed.")
+
+
+
+def initialize(p, cache_dir, dump_path):
 	cn_stat["current_stat"] = True
 
 	external_code = get_external_code()
@@ -54,6 +71,10 @@ def initialize(p, cache_dir):
 		return
 	
 	cn_stat["controlnet_units"] = external_code.get_all_units_in_processing(p)
+
+	if dump_path and os.path.isfile(dump_path):
+		load_unit(dump_path)
+
 	cn_stat["cache_dir"] = cache_dir
 
 	if cache_dir:

@@ -906,7 +906,7 @@ def create_wild_card_map(wild_card_dir):
 	result = {}
 	if os.path.isdir(wild_card_dir):
 		txt_list = glob.glob( os.path.join(wild_card_dir ,"**/*.txt"), recursive=True)
-		print("wild card txt_list : ", txt_list)
+		#print("wild card txt_list : ", txt_list)
 		for txt in txt_list:
 			basename_without_ext = os.path.splitext(os.path.basename(txt))[0]
 			with open(txt, encoding='utf-8') as f:
@@ -987,6 +987,8 @@ class Script(modules.scripts.Script):
 	def ui(self, is_img2img):
 
 		param_file_path = gr.Textbox(label="Load inputs txt Path( Use parameters stored in *-inputs.txt )", lines=1, value="")
+
+		cn_load_path = gr.Textbox(label="Load controlnet txt Path( Use parameters stored in *-controlnet.txt )", lines=1, value="")
 
 
 		fps = gr.Slider(minimum=1, maximum=120, step=1, label='Frames per second', value=8)
@@ -1185,10 +1187,10 @@ class Script(modules.scripts.Script):
 			segment_video = gr.Checkbox(label='Cut video in to segments ', value=False)
 			video_segment_duration = gr.Slider(minimum=10, maximum=60, step=1, label='Video Segment Duration (seconds)', value=20)
 
-		return [param_file_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness]
+		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness]
 
 		
-	def run(self, p, param_file_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness):
+	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness):
 		calc_time_start = time.perf_counter()
 
 		processing.fix_seed(p)
@@ -1254,6 +1256,9 @@ class Script(modules.scripts.Script):
 				p.width = params["p_width"]
 				p.height = params["p_height"]
 
+		if cn_load_path:
+			if not os.path.isfile(cn_load_path):
+				raise IOError(f"Invalid input in cn_load_path: {cn_load_path}")
 
 		p.extra_generation_params = {
 			"Max Additional Denoise": denoising_strength_change_amplitude,
@@ -1317,7 +1322,7 @@ class Script(modules.scripts.Script):
 		cn_cache_dir = os.path.join(loopback_wave_path, "cn_detect_map")
 		cn_cache_dir = os.path.join(cn_cache_dir, f"{fps*flow_interpolation_multi}")
 
-		scripts.util_sd_loopback_music_sync_wave.controlnet.initialize(p, cn_cache_dir)
+		scripts.util_sd_loopback_music_sync_wave.controlnet.initialize(p, cn_cache_dir, cn_load_path)
 		scripts.util_sd_loopback_music_sync_wave.controlnet.dump( loopback_wave_images_path + "-controlnet.txt" )
 
 		common_prompts = common_prompts.strip()
