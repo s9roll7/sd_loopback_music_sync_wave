@@ -520,6 +520,9 @@ def apply_optical_flow(_p, i, fps, interpolation_multi, flow_inpaint_method, flo
 
 	if mask_array is None:
 		return img
+	
+	img = img.convert("RGB")
+	mask_array = mask_array.clip(0, 255).astype(np.uint8)
 
 	if flow_inpaint_method == 0:
 		img = Image.fromarray(cv2.inpaint( np.array(img), mask_array,3,cv2.INPAINT_TELEA))
@@ -537,7 +540,6 @@ def apply_optical_flow(_p, i, fps, interpolation_multi, flow_inpaint_method, flo
 	
 	
 	org_mask_array = mask_array
-	img = img.convert("RGB")
 
 	inpaint_full_res = False
 
