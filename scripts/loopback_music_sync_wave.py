@@ -1514,7 +1514,7 @@ class Script(modules.scripts.Script):
 		print("wild_card_dir : ", wild_card_dir)
 
 		wild_card_map = create_wild_card_map(wild_card_dir)
-		print("wild_card_map", wild_card_map)
+#		print("wild_card_map", wild_card_map)
 
 
 		history = []
@@ -1685,6 +1685,8 @@ class Script(modules.scripts.Script):
 					control_net_input_image = frame_path
 				else:
 					print("!!!!!!!!!!!!! Warning! File for control_net_input_image not found : ",frame_path)
+					print("ran out of frames -> generation end")
+					break
 
 			op_seed = p.seed if mode_setting == "loopback" else seed_for_img2img_outpainting
 
