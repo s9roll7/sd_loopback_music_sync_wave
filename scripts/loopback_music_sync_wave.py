@@ -1155,6 +1155,10 @@ class Script(modules.scripts.Script):
 			use_controlnet_for_inpaint = gr.Checkbox(label='Use Controlnet for inpaint', value=True)
 			use_controlnet_for_occ_inpaint = gr.Checkbox(label='Use Controlnet for Occlusion inpaint', value=True)
 			use_controlnet_for_outpaint = gr.Checkbox(label='Use Controlnet for outpaint', value=False)
+			cn_ref_input_type = gr.Radio(label='Controlnet reference only Input Type', choices=["1st input img","prev frame"], value="1st input img", type="value")
+			gr.HTML(value="<p style='margin-bottom: 1.2em'>\
+								Regardless of the above selection, the image specified on the UI will be used first \
+							</p>")
 		
 		with gr.Accordion(label="Optical Flow Settings", open=True):
 			use_optical_flow = gr.Checkbox(label='Use Optical Flow', value=False)
@@ -1187,10 +1191,10 @@ class Script(modules.scripts.Script):
 			segment_video = gr.Checkbox(label='Cut video in to segments ', value=False)
 			video_segment_duration = gr.Slider(minimum=10, maximum=60, step=1, label='Video Segment Duration (seconds)', value=20)
 
-		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness]
+		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness]
 
 		
-	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,us_width,us_height,us_method,us_denoising_strength,auto_brightness):
+	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness):
 		calc_time_start = time.perf_counter()
 
 		processing.fix_seed(p)
@@ -1239,6 +1243,7 @@ class Script(modules.scripts.Script):
 				use_controlnet_for_inpaint = params["use_controlnet_for_inpaint"]
 				use_controlnet_for_occ_inpaint = params["use_controlnet_for_occ_inpaint"]
 				use_controlnet_for_outpaint = params["use_controlnet_for_outpaint"]
+				cn_ref_input_type = params["cn_ref_input_type"]
 
 				us_width = params["us_width"]
 				us_height = params["us_height"]
@@ -1369,6 +1374,8 @@ class Script(modules.scripts.Script):
 			params["use_controlnet_for_inpaint"] = use_controlnet_for_inpaint
 			params["use_controlnet_for_occ_inpaint"] = use_controlnet_for_occ_inpaint
 			params["use_controlnet_for_outpaint"] = use_controlnet_for_outpaint
+			params["cn_ref_input_type"] = cn_ref_input_type
+
 			params["us_width"] = us_width
 			params["us_height"] = us_height
 			params["us_method"] = us_method
@@ -1412,6 +1419,7 @@ class Script(modules.scripts.Script):
 					f"Use Controlnet for inpaint: {use_controlnet_for_inpaint}",
 					f"Use Controlnet for occlusion inpaint: {use_controlnet_for_occ_inpaint}",
 					f"Use Controlnet for outpaint: {use_controlnet_for_outpaint}",
+					f"Controlnet reference only Input Type: {cn_ref_input_type}",
 					"",
 					"Optical Flow Settings",
 					f"Use Optical Flow: {use_optical_flow}",
@@ -1575,6 +1583,9 @@ class Script(modules.scripts.Script):
 			else:
 				print("video frame not found -> use_optical_flow = False")
 				use_optical_flow = False
+		
+		initial_input_image = None
+		prev_frame_image = None
 
 		# generation loop
 		while True:
@@ -1681,13 +1692,18 @@ class Script(modules.scripts.Script):
 
 			state.job += f"Iteration {i + 1}/{frames}. Denoising Strength: {p.denoising_strength}"
 
-			control_net_input_image = None
+			if initial_input_image is None:
+				prev_frame_image = initial_input_image = p.init_images[0]
+
+			input_for_cn_ref_only = initial_input_image if cn_ref_input_type == "1st input img" else prev_frame_image
+
+			control_net_input_image = (None, input_for_cn_ref_only)
 
 			if ((mode_setting == "loopback") and use_video_frame_for_controlnet_in_loopback_mode) or (mode_setting == "img2img"):
 				frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
 				if frame_path and os.path.isfile(frame_path):
 					#org_frame = image_open_and_resize(frame_path, p.width, p.height)
-					control_net_input_image = frame_path
+					control_net_input_image = (frame_path, input_for_cn_ref_only)
 				else:
 					print("!!!!!!!!!!!!! Warning! File for control_net_input_image not found : ",frame_path)
 					print("ran out of frames -> generation end")
@@ -1741,6 +1757,8 @@ class Script(modules.scripts.Script):
 			else:
 				# Replace at the beginning of loop
 				pass
+
+			prev_frame_image = processed_img
 
 			# post process
 			if _post_process != 0:

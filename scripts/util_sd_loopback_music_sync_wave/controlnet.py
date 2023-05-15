@@ -12,8 +12,16 @@ cn_stat={
 	"controlnet_units" : None,
 	"current_stat" : True,
 	"cache_dir" : "",
-	"controlnet_modules" : []
+	"controlnet_modules" : [],
+	"controlnet_images" : []
 }
+
+reference_only_list = [
+	"reference_only",
+	"reference_adain",
+	"reference_adain+attn",
+]
+
 
 def get_cache(module_name, img_path):
 	if not cn_stat["cache_dir"]:
@@ -82,6 +90,7 @@ def initialize(p, cache_dir, dump_path):
 
 	if cn_stat["controlnet_units"]:
 		cn_stat["controlnet_modules"] = [i.module for i in cn_stat["controlnet_units"]]
+		cn_stat["controlnet_images"] = [i.image for i in cn_stat["controlnet_units"]]
 		cn_stat["initialized"] = True
 	
 	print("controlnet found : ", cn_stat["initialized"])
@@ -93,6 +102,7 @@ def dump(path):
 	d = {}
 	for i, c in enumerate(cn_stat["controlnet_units"]):
 		d[i] = vars(c)
+		d[i]["image"] = None
 
 	def default_func(o):
 		return str(o)
@@ -101,9 +111,11 @@ def dump(path):
 		json.dump(d, f, indent=4, default=default_func)
 
 
-def enable_controlnet(p, img_path):
+def enable_controlnet(p, input_info):
 	if not cn_stat["initialized"]:
 		return
+	
+	img_path, input_for_ref_only = input_info
 	
 	external_code = get_external_code()
 	if not external_code:
@@ -111,21 +123,29 @@ def enable_controlnet(p, img_path):
 	
 	for i,c in enumerate(cn_stat["controlnet_units"]):
 		if c.enabled:
-			if img_path is not None:
-				cache = get_cache( cn_stat["controlnet_modules"][i], img_path)
-
-				if cache:
-					img = cache
-					c.module = "none"
+			if cn_stat["controlnet_modules"][i] in reference_only_list:
+				c.module = cn_stat["controlnet_modules"][i]
+				if cn_stat["controlnet_images"][i]:
+					c.image = cn_stat["controlnet_images"][i]
 				else:
-					img = Image.open(img_path)
-					c.module = cn_stat["controlnet_modules"][i]
-
-				c.image = np.array(img)
+					c.image = np.array(input_for_ref_only)
 				c.resize_mode = 0
 			else:
-				c.image = None
-				c.module = cn_stat["controlnet_modules"][i]
+				if img_path is not None:
+					cache = get_cache( cn_stat["controlnet_modules"][i], img_path)
+
+					if cache:
+						img = cache
+						c.module = "none"
+					else:
+						img = Image.open(img_path)
+						c.module = cn_stat["controlnet_modules"][i]
+
+					c.image = np.array(img)
+					c.resize_mode = 0
+				else:
+					c.image = None
+					c.module = cn_stat["controlnet_modules"][i]
 	
 	print("enable_controlnet")
 
