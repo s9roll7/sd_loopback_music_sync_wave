@@ -62,8 +62,22 @@ Sub Extend Prompts:
 - (controlnet ip2p also seemed to work well with loopback)
 <div><video controls src="https://github.com/s9roll7/sd_loopback_music_sync_wave/assets/118420657/76335d01-3397-4561-b2bf-ac224f76edd7" muted="false"></video></div>
 
+<br>
 
+#### sample 6  
+- openpose_full / weight 1.0 / "My prompt is more important"
+- reference_adain / weight 1.0 / "Balanced" / threshold_a 0.5
+- softedge_pidisafe / weight 0.7 / "My prompt is more important"
+- Fps 8 / Interpolation Multiplier 3
+```
+0:: cyberpunk city
+1-100::(__location__: 1.0)
+1-100::(__clothing__: 1.0)
+-1::(__expression__:@wave_shape(1.0,0))
+```
+<div><video controls src="https://github.com/s9roll7/sd_loopback_music_sync_wave/assets/118420657/61986379-fbcd-4767-a5f9-143810e57352" muted="false"></video></div>
 
+<br>
 
 ## Installation  
 - Use the Extensions tab of the webui to [Install from URL]  
