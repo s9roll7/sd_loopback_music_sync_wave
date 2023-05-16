@@ -1166,7 +1166,7 @@ class Script(modules.scripts.Script):
 			flow_interpolation_multi = gr.Slider(minimum=1, maximum=5, step=1, label='Interpolation Multiplier', value=1)
 			flow_inpaint_method = gr.Radio(label='Optical Flow Inpaint Method ', choices=["cv2","sd","cv2 + sd"], value="cv2 + sd", type="index")
 			flow_occ_area_th = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Occlusion area threshold for(cv2 + sd)', value=0.05)
-			flow_occ_detect_th = gr.Slider(minimum=0.1, maximum=5.0, step=0.01, label='Occlusion area detection threshold', value=2.0)
+			flow_occ_detect_th = gr.Slider(minimum=0.1, maximum=5.0, step=0.01, label='Occlusion area detection threshold.', value=1.0)
 
 		with gr.Accordion(label="OutPainting Setting", open=True):
 			op_mask_blur = gr.Slider(label='Mask blur', minimum=0, maximum=64, step=1, value=4, elem_id=self.elem_id("mask_blur"))
