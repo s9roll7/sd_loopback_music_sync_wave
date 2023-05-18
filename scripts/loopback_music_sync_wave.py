@@ -403,6 +403,38 @@ def str_to_wave_list(raw_wave_list):
 
 	return wave_list
 
+def create_simple_wave_list(sound_file_path, video_file_path):
+	sound_len_msec = -1
+	video_len_msec = -1
+
+	if sound_file_path and os.path.isfile(sound_file_path):
+		import librosa
+		wave, sr = librosa.load(sound_file_path)
+		sound_len_msec = 1000 * librosa.get_duration(y=wave, sr=sr)
+		sound_len_msec = int(sound_len_msec)
+	
+	if video_file_path and os.path.isfile(video_file_path):
+		cap = cv2.VideoCapture(video_file_path)
+		video_frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+		video_fps = cap.get(cv2.CAP_PROP_FPS)
+		video_len_msec = 1000 * video_frame_count / video_fps
+		video_len_msec = int(video_len_msec)
+	
+	if sound_len_msec == -1:
+		len_msec = video_len_msec
+	elif video_len_msec == -1:
+		len_msec = sound_len_msec
+	else:
+		len_msec = min(sound_len_msec, video_len_msec)
+
+	wave_list = [
+		{"start_msec": 0, "type": "wave", "strength": 1.0, "end_msec":len_msec-1 },
+		{"start_msec": len_msec, "type": "end", "strength": 1.0, "end_msec":len_msec },
+	]
+
+	return wave_list
+
+
 def wave_list_to_str(wave_list):
 	wave_str_list = []
 	for w in wave_list:
@@ -1271,7 +1303,13 @@ class Script(modules.scripts.Script):
 
 		#input validation
 		raw_wave_list = raw_wave_list.strip()
-		wave_list = str_to_wave_list(raw_wave_list)
+		if raw_wave_list:
+			wave_list = str_to_wave_list(raw_wave_list)
+		else:
+			if (sound_file_path and os.path.isfile(sound_file_path)) or (video_file_path and os.path.isfile(video_file_path)):
+				wave_list = create_simple_wave_list(sound_file_path,video_file_path)
+			else:
+				raise IOError(f"Invalid input in wave list: {raw_wave_list}")
 
 		sub_wave_list = []
 		raw_sub_wave_list = raw_sub_wave_list.strip()
