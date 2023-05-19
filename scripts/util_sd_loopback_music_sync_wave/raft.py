@@ -246,6 +246,32 @@ def apply_flow(base_img, flow_path_list, mask_path_list):
 
 	return img, cv2.resize( mask_array, (W,H), interpolation = cv2.INTER_CUBIC) if mask_array is not None else None
 
+def get_scene_detection_list(detection_th, interpolation_multi, mask_path_list):
+	result = [False]
+	all_pixels = -1
+	value_list = [0]
+
+	for i in range(0, len(mask_path_list), interpolation_multi):
+		v = 0
+		for m in mask_path_list[i:i+interpolation_multi]:
+			mask_array = np.array(Image.open(m))
+			bad_pixels = np.count_nonzero(mask_array > 0)
+			if all_pixels == -1:
+				all_pixels = (mask_array.shape[0] * mask_array.shape[1])
+			bad_rate = bad_pixels / all_pixels
+			if bad_rate > v:
+				v = bad_rate
+		result.append( v > detection_th )
+		value_list.append(v)
+	
+
+	for i, r in enumerate(result):
+		if r:
+			print(f"{i} : {r} ({value_list[i]})")
+
+	return result
+
+
 
 def interpolate_frame(head_img, tail_img, cur_flow, add_flow):
 	list_a = []

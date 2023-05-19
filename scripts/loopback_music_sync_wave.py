@@ -17,7 +17,8 @@ import gradio as gr
 
 from modules import processing,images
 from modules.processing import Processed
-from modules.shared import opts, cmd_opts, state, sd_upscalers
+from modules.shared import opts, cmd_opts, state
+import modules.shared
 
 import scripts.util_sd_loopback_music_sync_wave.affine
 import scripts.util_sd_loopback_music_sync_wave.slide
@@ -1200,6 +1201,11 @@ class Script(modules.scripts.Script):
 			flow_occ_area_th = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Occlusion area threshold for(cv2 + sd)', value=0.05)
 			flow_occ_detect_th = gr.Slider(minimum=0.1, maximum=5.0, step=0.01, label='Occlusion area detection threshold.', value=1.0)
 
+			with gr.Accordion(label="Scene Detection Settings", open=False):
+				use_scene_detection = gr.Checkbox(label='Use Scene Detection ', value=True)
+				sd_threshold = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Scene Detection threshold', value=0.85)
+				sd_denoising_strength = gr.Slider(minimum=0, maximum=1, step=0.01, label='Denoise for New Scene', value=0.8)
+
 		with gr.Accordion(label="OutPainting Setting", open=True):
 			op_mask_blur = gr.Slider(label='Mask blur', minimum=0, maximum=64, step=1, value=4, elem_id=self.elem_id("mask_blur"))
 			op_inpainting_fill = gr.Radio(label='Masked content', choices=['fill', 'original', 'latent noise', 'latent nothing'], value='fill', type="index", elem_id=self.elem_id("inpainting_fill"))
@@ -1208,7 +1214,7 @@ class Script(modules.scripts.Script):
 		with gr.Accordion(label="Upscale Setting", open=False):
 			us_width = gr.Number(value=-1, label="Width", precision=0, interactive=True)
 			us_height = gr.Number(value=-1, label="Height", precision=0, interactive=True)
-			us_method = gr.Radio(label='Method', choices=['latent',*[x.name for x in sd_upscalers]], value=sd_upscalers[0].name, type="value")
+			us_method = gr.Radio(label='Method', choices=['latent',*[x.name for x in modules.shared.sd_upscalers]], value=modules.shared.sd_upscalers[0].name, type="value")
 			us_denoising_strength = gr.Slider(minimum=0, maximum=1, step=0.01, label='Denoising Strength for latent method', value=0.35)
 
 		with gr.Accordion(label="Inner Loopback", open=False):
@@ -1223,10 +1229,10 @@ class Script(modules.scripts.Script):
 			segment_video = gr.Checkbox(label='Cut video in to segments ', value=False)
 			video_segment_duration = gr.Slider(minimum=10, maximum=60, step=1, label='Video Segment Duration (seconds)', value=20)
 
-		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness]
+		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_scene_detection, sd_threshold, sd_denoising_strength, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness]
 
 		
-	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness):
+	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_scene_detection, sd_threshold, sd_denoising_strength, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness):
 		calc_time_start = time.perf_counter()
 
 		processing.fix_seed(p)
@@ -1250,6 +1256,11 @@ class Script(modules.scripts.Script):
 				flow_inpaint_method = params["flow_inpaint_method"]
 				flow_occ_area_th = params["flow_occ_area_th"]
 				flow_occ_detect_th = params["flow_occ_detect_th"]
+
+				use_scene_detection = params["use_scene_detection"]
+				sd_threshold = params["sd_threshold"]
+				sd_denoising_strength = params["sd_denoising_strength"]
+
 				use_video_frame_for_controlnet_in_loopback_mode = params["use_video_frame_for_controlnet_in_loopback_mode"]
 				op_mask_blur = params["op_mask_blur"]
 				op_inpainting_fill = params["op_inpainting_fill"]
@@ -1387,6 +1398,11 @@ class Script(modules.scripts.Script):
 			params["flow_inpaint_method"] = flow_inpaint_method
 			params["flow_occ_area_th"] = flow_occ_area_th
 			params["flow_occ_detect_th"] = flow_occ_detect_th
+
+			params["use_scene_detection"] = use_scene_detection
+			params["sd_threshold"] = sd_threshold
+			params["sd_denoising_strength"] = sd_denoising_strength
+
 			params["use_video_frame_for_controlnet_in_loopback_mode"] = use_video_frame_for_controlnet_in_loopback_mode
 			params["op_mask_blur"] = op_mask_blur
 			params["op_inpainting_fill"] = op_inpainting_fill
@@ -1466,6 +1482,10 @@ class Script(modules.scripts.Script):
 					f"Inpaint Method: {flow_inpaint_method}",
 					f"Occlusion area threshold for (cv2 + sd): {flow_occ_area_th}",
 					f"Occlusion area detection threshold: {flow_occ_detect_th}",
+					"",
+					f"Use Scene Detection: {use_scene_detection}",
+					f"Scene Detection Threshold: {sd_threshold}",
+					f"Denoising Strength for New Scene: {sd_denoising_strength}",
 					"",
 					f"OutPainting Mask blur: {op_mask_blur}",
 					f"OutPainting Masked content: {op_inpainting_fill}",
@@ -1621,6 +1641,15 @@ class Script(modules.scripts.Script):
 			else:
 				print("video frame not found -> use_optical_flow = False")
 				use_optical_flow = False
+		
+		scene_detection_list = []
+		if use_scene_detection:
+			if use_optical_flow:
+				m_path = os.path.join(os.path.join(project_dir, "occ_mask"), f"{fps * flow_interpolation_multi}")
+				mask_path_list = sorted(glob.glob( os.path.join(m_path ,"[0-9]*.png"), recursive=False))
+				scene_detection_list = scripts.util_sd_loopback_music_sync_wave.raft.get_scene_detection_list(sd_threshold, flow_interpolation_multi, mask_path_list)
+			else:
+				use_scene_detection = False
 		
 		initial_input_image = None
 		prev_frame_image = None
@@ -1778,6 +1807,15 @@ class Script(modules.scripts.Script):
 			
 			if mode_setting == "img2img":
 				p.seed = initial_seed
+
+			# scene_detection
+			if mode_setting == "loopback":
+				if use_scene_detection:
+					if scene_detection_list[i]:
+						print(f"{i} : scene change")
+						frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
+						p.init_images= [image_open_and_resize(frame_path, p.width, p.height)]
+						p.denoising_strength = sd_denoising_strength
 
 			processed = process_image(p, inner_lb_count, inner_lb_str, use_controlnet_for_main_generation, control_net_input_image)
 
