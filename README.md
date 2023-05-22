@@ -121,6 +121,7 @@ Sub Extend Prompts:
 - Extract the first frame of the source video, then Create the first input image with img2img based on it.
 - Set [Project Directory(optional)] / [Video File Path(optional)] / [Mode Settings] / [Optical Flow Setting]  
 (I recommend [Frames per second] = 8 and [interpolation multiplier] = 3)
+- ***For this purpose, there is no need to create waves, so [Max additional denoise] should be set to 0! I think [Denoising strength] should be around 0.3***
 - Press [Generate]  
 See [Here](https://github.com/s9roll7/sd_loopback_music_sync_wave/wiki/loopback---controlnet) and [Here](https://github.com/s9roll7/sd_loopback_music_sync_wave/wiki/loopback---controlnet---optical-flow) for more information.
 
