@@ -84,7 +84,7 @@ postprocess_regex = create_regex(r'#','post_process',1)
 
 extend_prompt_range_regex = r'([0-9]+)\-([0-9]+)'
 #wild_card_regex = r'(?:\A|\W)__(\w+)__(?:\W|\Z)'
-wild_card_regex = r'(\A|\W)__(\w+)__(\W|\Z)'
+wild_card_regex = r'(\A|\W)__([\w-]+)__(\W|\Z)'
 
 
 wave_func_map = {
@@ -134,10 +134,26 @@ def get_wild_card_dir():
     path = os.path.join(path, "wildcards")
     return os.path.normpath(path)
 
-def get_video_frame_path(project_dir, i, interpolation_multi):
-	path = os.path.join(project_dir, "video_frame")
+def get_video_frame_path(project_dir, i, fps, interpolation_multi):
+	if not project_dir:
+		return ""
+	path = os.path.join(os.path.join(project_dir, "video_frame"), f"{fps * interpolation_multi}")
 	path = os.path.join(path, f"{str(i * interpolation_multi).zfill(5)}.png")
 	return path
+
+def get_overwrite_frame_path(project_dir, i, fps, interpolation_multi):
+	if not project_dir:
+		return ""
+	path = os.path.join(os.path.join(project_dir, "overwrite_frame"), f"{fps * interpolation_multi}")
+	if i == 0:
+		path_list = [ os.path.join(path, f"{str(0).zfill(5)}.png") ]
+	else:
+		path_list = [ os.path.join(path, f"{str(n).zfill(5)}.png") for n in range((i-1) * interpolation_multi+1, (i) * interpolation_multi+1)]
+
+	for p in path_list:
+		if os.path.isfile(p):
+			return p
+	return ""
 
 def run_cmd(cmd, silent = False):
 	cmd = list(map(lambda arg: str(arg), cmd))
@@ -266,10 +282,14 @@ def extract_video_frame(fe_project_dir, fe_movie_path, fps, flow_interpolation_m
 		print("Movie File not found : ", fe_movie_path)
 		return
 	
-	extract_dir = os.path.join(fe_project_dir , "video_frame")
+	extract_dir = os.path.join(os.path.join(fe_project_dir, "video_frame"), f"{fps * flow_interpolation_multi}")
 	os.makedirs(extract_dir, exist_ok=True)
 
-	remove_pngs_in_dir(extract_dir)
+	pngs = glob.glob( os.path.join(extract_dir ,"[0-9]*.png"), recursive=False)
+	if pngs:
+		print("video frame found. skip extract_video_frame")
+		return
+#	remove_pngs_in_dir(extract_dir)
 
 	args = [
 		"-i", fe_movie_path,
@@ -742,7 +762,7 @@ def main_wave_loop(p, wave_list, current_time, total_progress, mode_setting, ini
 						if init_image_per_wave_map:
 							if wave_index in init_image_per_wave_map:
 								new_init_image_path = init_image_per_wave_map[ wave_index ]
-								init_image = image_open_and_resize(new_init_image_path, p.width, p.height)
+								init_image = Image.open(new_init_image_path)
 
 								try:
 									prompt = get_positive_prompt_from_image(init_image)
@@ -750,6 +770,8 @@ def main_wave_loop(p, wave_list, current_time, total_progress, mode_setting, ini
 										current_common_prompt = prompt
 								except Exception as e:
 									print("get_positive_prompt_from_image failed. ",new_init_image_path)
+								
+								init_image = resize_img(init_image, p.width, p.height)
 					
 					# register bpm event
 					current_common_prompt = bpm_event.parse_prompt(current_common_prompt, current_time)
@@ -1632,9 +1654,9 @@ class Script(modules.scripts.Script):
 		extract_video_frame(project_dir, video_file_path, fps, flow_interpolation_multi, ffmpeg_path)
 
 		if use_optical_flow:
-			frame_path = get_video_frame_path(project_dir, 0, flow_interpolation_multi)
+			frame_path = get_video_frame_path(project_dir, 0, fps, flow_interpolation_multi)
 			if frame_path and os.path.isfile(frame_path):
-				v_path = os.path.join(project_dir, "video_frame")
+				v_path = os.path.join(os.path.join(project_dir, "video_frame"), f"{fps * flow_interpolation_multi}")
 				o_path = os.path.join(os.path.join(project_dir, "optical_flow"), f"{fps * flow_interpolation_multi}")
 				m_path = os.path.join(os.path.join(project_dir, "occ_mask"), f"{fps * flow_interpolation_multi}")
 				scripts.util_sd_loopback_music_sync_wave.raft.create_optical_flow(v_path, o_path, m_path, use_optical_flow_cache, None, flow_occ_detect_th)
@@ -1653,6 +1675,8 @@ class Script(modules.scripts.Script):
 		
 		initial_input_image = None
 		prev_frame_image = None
+
+		scene_changed_list = []
 
 		# generation loop
 		while True:
@@ -1684,7 +1708,7 @@ class Script(modules.scripts.Script):
 
 			# override init_image for img2img
 			if mode_setting == "img2img":
-				frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
+				frame_path = get_video_frame_path(project_dir, i, fps, flow_interpolation_multi)
 				if frame_path and os.path.isfile(frame_path):
 					org_frame = image_open_and_resize(frame_path, p.width, p.height)
 					p.init_images = [org_frame]
@@ -1767,7 +1791,7 @@ class Script(modules.scripts.Script):
 			control_net_input_image = (None, input_for_cn_ref_only)
 
 			if ((mode_setting == "loopback") and use_video_frame_for_controlnet_in_loopback_mode) or (mode_setting == "img2img"):
-				frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
+				frame_path = get_video_frame_path(project_dir, i, fps, flow_interpolation_multi)
 				if frame_path and os.path.isfile(frame_path):
 					#org_frame = image_open_and_resize(frame_path, p.width, p.height)
 					control_net_input_image = (frame_path, input_for_cn_ref_only)
@@ -1779,48 +1803,82 @@ class Script(modules.scripts.Script):
 			op_seed = p.seed if mode_setting == "loopback" else seed_for_img2img_outpainting
 
 
-			# optical flow
-			if use_optical_flow:
-				p.init_images = [ apply_optical_flow(p, i, fps, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, project_dir, op_mask_blur, op_inpainting_fill, op_str, op_seed, use_controlnet_for_occ_inpaint, control_net_input_image)]
-
-			# affine
-			if is_affine_need:
-				p.init_images = [ affine_image(p, op_mask_blur, op_inpainting_fill, op_str, op_seed, affine_input, use_controlnet_for_outpaint, control_net_input_image)]
+			# scene_detection
+			auto_scene_detect = False
+			if mode_setting == "loopback":
+				if use_scene_detection:
+					auto_scene_detect = scene_detection_list[i]
 			
-			# inpaint
-			if inpaint_mask_prompt:
-				if not inpaint_inpaint_prompt:
-					inpaint_inpaint_prompt.append(p.prompt)
-
-				p.init_images = [ apply_inpaint(p, inpaint_mask_prompt[0], inpaint_inpaint_prompt[0], op_mask_blur, op_inpainting_fill, op_str, op_seed, use_controlnet_for_inpaint, control_net_input_image ) ]
-			
-			# slide/blind
-			if is_slide_need:
-				p.init_images = [ apply_slide(p, op_mask_blur, op_inpainting_fill, op_str, op_seed, slide_inputs, use_controlnet_for_outpaint, control_net_input_image) ]
+			# overwrite_frame
+			overwrite_frame = ""
+			if mode_setting == "loopback":
+				overwrite_frame = get_overwrite_frame_path(project_dir, i, fps, flow_interpolation_multi)
 
 
-			# other
-			if _post_process == 0:
-				if _blur_str != 0 or _hue_type != -1:
-					print("apply_other_effect")
-					p.init_images = [ scripts.util_sd_loopback_music_sync_wave.other_effect.apply_other_effect( p.init_images[0], *other_effect_input ) ]
+			if (not auto_scene_detect) and (not overwrite_frame):
+				# optical flow
+				if use_optical_flow:
+					p.init_images = [ apply_optical_flow(p, i, fps, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, project_dir, op_mask_blur, op_inpainting_fill, op_str, op_seed, use_controlnet_for_occ_inpaint, control_net_input_image)]
+
+				# affine
+				if is_affine_need:
+					p.init_images = [ affine_image(p, op_mask_blur, op_inpainting_fill, op_str, op_seed, affine_input, use_controlnet_for_outpaint, control_net_input_image)]
+				
+				# inpaint
+				if inpaint_mask_prompt:
+					if not inpaint_inpaint_prompt:
+						inpaint_inpaint_prompt.append(p.prompt)
+
+					p.init_images = [ apply_inpaint(p, inpaint_mask_prompt[0], inpaint_inpaint_prompt[0], op_mask_blur, op_inpainting_fill, op_str, op_seed, use_controlnet_for_inpaint, control_net_input_image ) ]
+				
+				# slide/blind
+				if is_slide_need:
+					p.init_images = [ apply_slide(p, op_mask_blur, op_inpainting_fill, op_str, op_seed, slide_inputs, use_controlnet_for_outpaint, control_net_input_image) ]
+
+
+				# other
+				if _post_process == 0:
+					if _blur_str != 0 or _hue_type != -1:
+						print("apply_other_effect")
+						p.init_images = [ scripts.util_sd_loopback_music_sync_wave.other_effect.apply_other_effect( p.init_images[0], *other_effect_input ) ]
 			
 			if mode_setting == "img2img":
 				p.seed = initial_seed
 
-			# scene_detection
-			if mode_setting == "loopback":
-				if use_scene_detection:
-					if scene_detection_list[i]:
-						print(f"{i} : scene change")
-						frame_path = get_video_frame_path(project_dir, i, flow_interpolation_multi)
-						p.init_images= [image_open_and_resize(frame_path, p.width, p.height)]
-						p.denoising_strength = sd_denoising_strength
+			if not overwrite_frame:
+				# scene_detection
+				if auto_scene_detect:
+					print(f"{i} : scene change")
 
-			processed = process_image(p, inner_lb_count, inner_lb_str, use_controlnet_for_main_generation, control_net_input_image)
+					scene_changed_list.append(i)
 
-			if initial_info is None:
-				initial_info = processed.info
+					frame_path = get_video_frame_path(project_dir, i, fps, flow_interpolation_multi)
+					p.init_images= [image_open_and_resize(frame_path, p.width, p.height)]
+					p.denoising_strength = sd_denoising_strength
+
+				processed = process_image(p, inner_lb_count, inner_lb_str, use_controlnet_for_main_generation, control_net_input_image)
+
+				if initial_info is None:
+					initial_info = processed.info
+			
+			else:
+				# overwrite_frame
+				print("overwrite frame : ",overwrite_frame)
+
+				scene_changed_list.append(i)
+
+				overwrite_img = Image.open(overwrite_frame)
+
+				try:
+					overwrite_prompt = get_positive_prompt_from_image(overwrite_img)
+					if overwrite_prompt:
+						main_wave_status["current_common_prompt"] = overwrite_prompt
+						print("overwrite common prompt : ",overwrite_prompt)
+				except Exception as e:
+					print("get_positive_prompt_from_image failed. ",overwrite_frame)
+
+				processed = processing.Processed(p=p,images_list=[ resize_img(overwrite_img, p.width, p.height) ],seed=p.seed)
+
 			
 			processed_img = processed.images[0]
 
@@ -1884,6 +1942,10 @@ class Script(modules.scripts.Script):
 		# interpolate
 		if use_optical_flow and flow_interpolation_multi > 1:
 
+			sc_list = [False for n in range(i)]
+			for s in scene_changed_list:
+				sc_list[s] = True
+			
 			if save_video:
 				input_pattern = os.path.join(loopback_wave_images_path, "%05d.png")
 				encode_video(input_pattern, initial_image_number, out_video_path+"_base", fps, video_quality, video_encoding, segment_video, video_segment_duration, ffmpeg_path, sound_file_path)
@@ -1891,7 +1953,7 @@ class Script(modules.scripts.Script):
 			src_interpolate_path = loopback_wave_images_path
 			loopback_wave_images_path = os.path.join(loopback_wave_images_path, "interpolate")
 			flow_path = os.path.join(os.path.join(project_dir, "optical_flow"), f"{fps * flow_interpolation_multi}")
-			scripts.util_sd_loopback_music_sync_wave.raft.interpolate(src_interpolate_path, loopback_wave_images_path, flow_interpolation_multi, flow_path )
+			scripts.util_sd_loopback_music_sync_wave.raft.interpolate(src_interpolate_path, loopback_wave_images_path, flow_interpolation_multi, flow_path, sc_list )
 
 		if save_video:
 			input_pattern = os.path.join(loopback_wave_images_path, "%05d.png")

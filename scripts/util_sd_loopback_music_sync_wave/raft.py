@@ -299,7 +299,17 @@ def interpolate_frame(head_img, tail_img, cur_flow, add_flow):
 
 	return result
 
-def interpolate(org_frame_path, out_frame_path, flow_interpolation_multi, flow_path ):
+def interpolate_frame2(head_img, tail_img, num_of_frames):
+	result = []
+
+	for i in range(num_of_frames):
+		i_frame = Image.blend(head_img,tail_img, (i)/ num_of_frames )
+		result.append( i_frame )
+		i+=1
+
+	return result
+
+def interpolate(org_frame_path, out_frame_path, flow_interpolation_multi, flow_path, scene_changed_list ):
 
 	print("interpolate start")
 
@@ -323,7 +333,7 @@ def interpolate(org_frame_path, out_frame_path, flow_interpolation_multi, flow_p
 	i = 0
 	tail_img=None
 
-	for head, tail in zip(org_frames, org_frames[1:]):
+	for org_i, (head, tail) in enumerate(zip(org_frames, org_frames[1:])):
 		cur_flow = [next(flows, None) for x in range(flow_interpolation_multi)]
 
 		cur_flow = [ x for x in cur_flow if i is not None]
@@ -332,8 +342,12 @@ def interpolate(org_frame_path, out_frame_path, flow_interpolation_multi, flow_p
 
 		head_img = Image.open( head )
 		tail_img = Image.open( tail )
-
-		result_imgs = interpolate_frame(head_img, tail_img, cur_flow, tmp_flow)
+		
+		if scene_changed_list[org_i+1]:
+#			result_imgs = [ (head_img if f<(flow_interpolation_multi/2) else tail_img) for f in range(flow_interpolation_multi)]
+			result_imgs = interpolate_frame2(head_img, tail_img, flow_interpolation_multi)
+		else:
+			result_imgs = interpolate_frame(head_img, tail_img, cur_flow, tmp_flow)
 
 		for f in result_imgs:
 			output_img_path = os.path.join(out_frame_path, f"{str(i).zfill(5)}.png" )

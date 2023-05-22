@@ -8,7 +8,7 @@ from scripts.loopback_music_sync_wave import get_wave_type_list,str_to_wave_list
 from scripts.util_sd_loopback_music_sync_wave.wave_generator import wave_generator_process,f2w_generator_process
 from scripts.util_sd_loopback_music_sync_wave.audio_analyzer import audio_analyzer_process
 from scripts.util_sd_loopback_music_sync_wave.wave_list_test import wave_list_test_process
-from scripts.util_sd_loopback_music_sync_wave.frame_extractor import frame_extract_one,frame_extract_per_wave
+from scripts.util_sd_loopback_music_sync_wave.frame_extractor import frame_extract_one,frame_extract_per_wave,frame_extract_scene_change
 from scripts.util_sd_loopback_music_sync_wave.prompt_test import prompt_test_process
 
 def on_ui_tabs():
@@ -136,7 +136,8 @@ def on_ui_tabs():
 					fe_ffmpeg_path = gr.Textbox(label="ffmpeg binary.	Only set this if it fails otherwise.", lines=1, value="")
 					
 				with gr.Tabs():
-					with gr.TabItem('Extract first frame'):	
+					with gr.TabItem('Extract first frame'):
+						fe_fps = gr.Slider(minimum=-1, maximum=240, step=1, label='FPS including interpolated frames(Optional)', value=-1)
 						with gr.Row():
 							extract_one_btn = gr.Button('Extract', variant='primary')
 					with gr.TabItem('Frame Extract For Initial image switching per wave'):
@@ -144,6 +145,13 @@ def on_ui_tabs():
 							per_wave_extract_list_txt = gr.Textbox(label='Wave List', lines=30, interactive=True)
 						with gr.Row():
 							per_wave_extract_btn = gr.Button('Extract', variant='primary')
+					with gr.TabItem('Extract Scene Change frame'):
+						sc_fe_fps = gr.Slider(minimum=1, maximum=240, step=1, label='FPS including interpolated frames', value=24)
+						sc_use_optical_flow_cache = gr.Checkbox(label='Use Optical Flow Cache', value=True)
+						sc_flow_occ_detect_th = gr.Slider(minimum=0.1, maximum=5.0, step=0.01, label='Occlusion area detection threshold.', value=1.0)
+						sc_sd_threshold = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Scene Detection threshold', value=0.85)
+						with gr.Row():
+							sc_extract_btn = gr.Button('Extract', variant='primary')
 
 
 			def send_to_extract(list_txt):
@@ -255,6 +263,7 @@ def on_ui_tabs():
 					fe_project_dir,
 					fe_movie_path,
 					fe_ffmpeg_path,
+					fe_fps,
 				],
 				outputs=[
 					html_info
@@ -277,6 +286,24 @@ def on_ui_tabs():
 				show_progress=False,
 			)
 			per_wave_extract_btn.click(**fe_per_wave_gen_args)
+
+			sc_fe_gen_args = dict(
+				fn=wrap_gradio_gpu_call(frame_extract_scene_change),
+				inputs=[
+					fe_project_dir,
+					fe_movie_path,
+					fe_ffmpeg_path,
+					sc_fe_fps,
+					sc_use_optical_flow_cache,
+					sc_flow_occ_detect_th,
+					sc_sd_threshold,
+				],
+				outputs=[
+					html_info
+				],
+				show_progress=False,
+			)
+			sc_extract_btn.click(**sc_fe_gen_args)
 
 			prompt_test_args = dict(
 				fn=wrap_gradio_gpu_call(prompt_test_process),
