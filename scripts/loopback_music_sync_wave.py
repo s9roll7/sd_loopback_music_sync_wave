@@ -1053,6 +1053,7 @@ class Script(modules.scripts.Script):
 		video_file_path = gr.Textbox(label="Video File Path(optional)", lines=1, value="")
 
 		denoising_strength_change_amplitude = gr.Slider(minimum=0, maximum=1, step=0.01, label='Max additional denoise', value=0.6)
+		denoising_strength_add_freq = gr.Slider(minimum=1, maximum=10, step=1, label='Denoising Strength Add frequency', value=1)
 
 		with gr.Accordion(label="Cheat Sheet", open=False):
 			gr.Textbox(label="ver 0.012", lines=5, interactive=False,
@@ -1251,10 +1252,10 @@ class Script(modules.scripts.Script):
 			segment_video = gr.Checkbox(label='Cut video in to segments ', value=False)
 			video_segment_duration = gr.Slider(minimum=10, maximum=60, step=1, label='Video Segment Duration (seconds)', value=20)
 
-		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_scene_detection, sd_threshold, sd_denoising_strength, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness]
+		return [param_file_path, cn_load_path, wave_list, sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_scene_detection, sd_threshold, sd_denoising_strength, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, denoising_strength_add_freq, initial_image_number, common_prompts,extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration, use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness]
 
 		
-	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_scene_detection, sd_threshold, sd_denoising_strength, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness):
+	def run(self, p, param_file_path, cn_load_path, raw_wave_list, raw_sub_wave_list, project_dir, sound_file_path, video_file_path, mode_setting, use_optical_flow, use_optical_flow_cache, flow_interpolation_multi, flow_inpaint_method, flow_occ_area_th, flow_occ_detect_th, use_scene_detection, sd_threshold, sd_denoising_strength, use_video_frame_for_controlnet_in_loopback_mode, op_mask_blur, op_inpainting_fill, op_str, inner_lb_count, inner_lb_str, denoising_strength_change_amplitude, denoising_strength_add_freq, initial_image_number, common_prompts, extend_prompts, sub_extend_prompts, save_prompts, save_video, output_name, fps, video_quality, video_encoding, ffmpeg_path, segment_video, video_segment_duration,use_controlnet_for_lb,use_controlnet_for_img2img,use_controlnet_for_inpaint,use_controlnet_for_occ_inpaint,use_controlnet_for_outpaint,cn_ref_input_type, us_width,us_height,us_method,us_denoising_strength,auto_brightness):
 		calc_time_start = time.perf_counter()
 
 		processing.fix_seed(p)
@@ -1290,6 +1291,7 @@ class Script(modules.scripts.Script):
 				inner_lb_count = params["inner_lb_count"]
 				inner_lb_str = params["inner_lb_str"]
 				denoising_strength_change_amplitude = params["denoising_strength_change_amplitude"]
+				denoising_strength_add_freq = params["denoising_strength_add_freq"]
 				initial_image_number = params["initial_image_number"]
 				common_prompts = params["common_prompts"]
 				extend_prompts = params["extend_prompts"]
@@ -1432,6 +1434,7 @@ class Script(modules.scripts.Script):
 			params["inner_lb_count"] = inner_lb_count
 			params["inner_lb_str"] = inner_lb_str
 			params["denoising_strength_change_amplitude"] = denoising_strength_change_amplitude
+			params["denoising_strength_add_freq"] = denoising_strength_add_freq
 			params["initial_image_number"] = initial_image_number
 			params["common_prompts"] = common_prompts
 			params["extend_prompts"] = extend_prompts
@@ -1483,6 +1486,7 @@ class Script(modules.scripts.Script):
 					f"FPS: {fps}",
 					f"Base Denoising Strength: {initial_denoising_strength}",
 					f"Max Additional Denoise: {denoising_strength_change_amplitude}",
+					f"Denoising Strength Add frequency: {denoising_strength_add_freq}",
 					f"Project Directory: {project_dir}",
 					f"Sound File: {org_sound_file_path}",
 					f"Video File: {video_file_path}",
@@ -1678,6 +1682,8 @@ class Script(modules.scripts.Script):
 
 		scene_changed_list = []
 
+		denoising_strength_add_timing = 1
+
 		# generation loop
 		while True:
 
@@ -1705,6 +1711,13 @@ class Script(modules.scripts.Script):
 				
 				new_prompt += "," + sub_wave_status["new_prompt"]
 			
+
+			# denoising_strength_add_freq
+			denoising_strength_add_timing -= 1
+			if denoising_strength_add_timing == 0:
+				denoising_strength_add_timing = denoising_strength_add_freq
+			else:
+				p.denoising_strength = initial_denoising_strength
 
 			# override init_image for img2img
 			if mode_setting == "img2img":
