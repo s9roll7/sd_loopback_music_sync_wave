@@ -497,7 +497,8 @@ def process_image(p, loopback_count, str_for_loopback, is_controlnet, img_for_co
 		scripts.util_sd_loopback_music_sync_wave.controlnet.disable_controlnet(p)
 
 	while True:
-		processed = processing.process_images(p)
+		copy_p = copy.copy(p)
+		processed = processing.process_images(copy_p)
 		loopback_count -= 1
 
 		if loopback_count <= 0:
