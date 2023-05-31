@@ -1246,7 +1246,7 @@ class Script(modules.scripts.Script):
 			inner_lb_str = gr.Slider(minimum=0, maximum=1, step=0.01, label='Denoising Strength for Inner Loopback', value=0.25)
 
 		with gr.Accordion(label="Advanced Settings", open=False):
-			auto_brightness = gr.Checkbox(label='Auto Brightness Adjustment', value=True)
+			auto_brightness = gr.Checkbox(label='Auto Brightness Adjustment ', value=False)
 			save_prompts = gr.Checkbox(label='Save prompts as text file', value=True)
 			initial_image_number = gr.Number(minimum=0, label='Initial generated image number', value=0)
 			ffmpeg_path = gr.Textbox(label="ffmpeg binary.	Only set this if it fails otherwise.", lines=1, value="")
