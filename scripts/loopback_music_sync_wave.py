@@ -578,6 +578,9 @@ def apply_optical_flow(_p, i, fps, interpolation_multi, flow_inpaint_method, flo
 	img = img.convert("RGB")
 	mask_array = mask_array.clip(0, 255).astype(np.uint8)
 
+	if flow_inpaint_method == 3:
+		return img
+
 	if flow_inpaint_method == 0:
 		img = Image.fromarray(cv2.inpaint( np.array(img), mask_array,3,cv2.INPAINT_TELEA))
 		return img
@@ -1221,7 +1224,7 @@ class Script(modules.scripts.Script):
 			use_optical_flow = gr.Checkbox(label='Use Optical Flow', value=False)
 			use_optical_flow_cache = gr.Checkbox(label='Use Optical Flow Cache', value=True)
 			flow_interpolation_multi = gr.Slider(minimum=1, maximum=5, step=1, label='Interpolation Multiplier', value=1)
-			flow_inpaint_method = gr.Radio(label='Optical Flow Inpaint Method ', choices=["cv2","sd","cv2 + sd"], value="cv2 + sd", type="index")
+			flow_inpaint_method = gr.Radio(label='Optical Flow Inpaint Method ', choices=["cv2","sd","cv2 + sd","none"], value="cv2 + sd", type="index")
 			flow_occ_area_th = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Occlusion area threshold for(cv2 + sd)', value=0.05)
 			flow_occ_detect_th = gr.Slider(minimum=0.1, maximum=5.0, step=0.01, label='Occlusion area detection threshold.', value=1.0)
 

@@ -124,6 +124,10 @@ def enable_controlnet(p, input_info):
 	for i,c in enumerate(cn_stat["controlnet_units"]):
 		if c.enabled:
 			if cn_stat["controlnet_modules"][i] in reference_only_list:
+				# c.image priority list for reference_***
+				# 1. Image specified in UI
+				# 2. 1st input img or prev frame img
+
 				c.module = cn_stat["controlnet_modules"][i]
 				if cn_stat["controlnet_images"][i]:
 					c.image = cn_stat["controlnet_images"][i]
@@ -131,21 +135,31 @@ def enable_controlnet(p, input_info):
 					c.image = np.array(input_for_ref_only)
 				c.resize_mode = 0
 			else:
-				if img_path is not None:
-					cache = get_cache( cn_stat["controlnet_modules"][i], img_path)
-
-					if cache:
-						img = cache
-						c.module = "none"
-					else:
-						img = Image.open(img_path)
-						c.module = cn_stat["controlnet_modules"][i]
-
-					c.image = np.array(img)
-					c.resize_mode = 0
-				else:
-					c.image = None
+				# c.image priority list
+				# 1. Image specified in UI
+				# 2. preprocessed cache
+				# 3. video frame (for preprocessor "none")
+				# 4. None
+				if cn_stat["controlnet_images"][i]:
+					c.image = cn_stat["controlnet_images"][i]
 					c.module = cn_stat["controlnet_modules"][i]
+					
+				else:
+					if img_path is not None:
+						cache = get_cache( cn_stat["controlnet_modules"][i], img_path)
+
+						if cache:
+							img = cache
+							c.module = "none"
+						else:
+							img = Image.open(img_path)
+							c.module = cn_stat["controlnet_modules"][i]
+
+						c.image = np.array(img)
+						c.resize_mode = 0
+					else:
+						c.image = None
+						c.module = cn_stat["controlnet_modules"][i]
 	
 	print("enable_controlnet")
 
